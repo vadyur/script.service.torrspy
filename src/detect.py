@@ -50,13 +50,10 @@ def from_translit(text):
     r = translit(text, 'ru')
     return r
 
-def test():
-    u = 'http://127.0.0.1:8090/stream/Drozh.zemli.Ostrov.krikunov.2020.BDRip.1080p.ELEKTRI4KA.UNIONGANG.mkv?link=b1cd1ebbe7cd7317beb91575f9b0473a87b2baa7&index=1&play'
-    n = extract_filename(u)
+def test(url):
+    n = extract_filename(url)
     t, d = extract_title_date(n)
     r = from_translit(t)
 
-    pass
+    return n, t, d, r
 
-if __name__ == '__main__':
-    test()

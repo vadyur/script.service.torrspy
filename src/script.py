@@ -5,7 +5,11 @@ from sys import version_info
 if version_info >= (3, 0, 0):
     from urllib.parse import urlparse, parse_qs
 else:
-    from urlparse import urlparse, parse_qs    
+    from urlparse import urlparse, parse_qs    # type: ignore
+
+from torrserve_stream import Settings
+
+settings = Settings()
 
 def playing_torrserver_source():
     import xbmc
@@ -14,7 +18,7 @@ def playing_torrserver_source():
     if player.isPlayingVideo():
         name = player.getPlayingFile()
         if name:
-            if ':8090/' in name:
+            if ':{}/'.format(settings.port) in name:
                 return True
     return False
 
