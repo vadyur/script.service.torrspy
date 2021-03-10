@@ -2,7 +2,7 @@
 <addon id="script.service.torrspy" name="TorrSpy" version="0.0.1.6" provider-name="-=Vd=-">
 
   <requires>
-    <import addon="xbmc.python" version="2.26.0"/>
+    <import addon="xbmc.python" version="3.0.0"/>
     <import addon="script.module.torrserver"/>
     <import addon="script.module.requests"/>
   </requires>
