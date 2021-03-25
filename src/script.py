@@ -108,13 +108,16 @@ def open_settings():
 def create_playlists():    
     from vdlib.kodi.compat import translatePath
     src_dir = translatePath('special://home/addons/script.service.torrspy/resources/playlists')
-    dst_dir = translatePath('special://masterprofile/playlists/video')
+    dst_dir = translatePath('special://profile/playlists/video')
 
     from xbmcvfs import copy, listdir
     from os.path import join
     _, files = listdir(src_dir)
     for file in files:
         copy(join(src_dir, file), join(dst_dir, file))
+
+    from xbmc import executebuiltin
+    executebuiltin('ActivateWindow(Videos, {}, return)'.format('special://profile/playlists/video'))
 
 def create_sources():
     from xbmcgui import Dialog
