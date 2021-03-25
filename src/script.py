@@ -67,17 +67,32 @@ def get_info():
     print('---TorrSpy: get_info---')
     import xbmc, xbmcgui
     xbmc.sleep(10*1000)
-    from detect import extract_title_date, extract_filename
     item = xbmcgui.ListItem()
     url = xbmc.Player().getPlayingFile()
     item.setPath(url)
-    filename = extract_filename(url)
-    title, year = extract_title_date(filename)
-    item.setInfo('video', 
-                    {'title': title,
-                    'year': year, 
-                    'rating': 7.6,
-                    'plot': 'Cool cool cool'})
+
+    from torrserve_stream import Engine
+
+    hash = Engine.extract_hash_from_play_url(url)
+    engine = Engine(hash=hash, host=settings.host, port=settings.port)
+
+    vi = engine.get_video_info()
+    if vi:
+        item.setInfo('video', vi)
+    else:
+        from detect import extract_title_date, extract_filename
+        filename = extract_filename(url)
+        title, year = extract_title_date(filename)
+        item.setInfo('video', 
+                        {'title': title,
+                        'year': year, 
+                        'rating': 7.6,
+                        'plot': 'Cool cool cool'})
+
+    art = engine.get_art()
+    if art:
+        item.setArt(art)
+
     xbmc.Player().updateInfoTag(item)
     print('---TorrSpy---')
     print(xbmc.Player().getPlayingFile())

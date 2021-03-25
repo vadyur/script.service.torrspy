@@ -12,6 +12,10 @@ addon = xbmcaddon.Addon()
 addon_id = addon.getAddonInfo('id')
 addon_path = addon.getAddonInfo('path')
 
+def log(s):
+    message = '[{}]: {}'.format(addon_id, s)
+    xbmc.log(message)
+
 def make_url(action):
     if action:
         params_str = quote_plus(action)
@@ -48,19 +52,24 @@ class MyPlayer(xbmc.Player):
     tagline = '##TorrSpy##'
 
     def onAVStarted(self):
-        print('MyPlayer.onAVStarted')
+        log('MyPlayer.onAVStarted')
 
         #    def onPlayBackStarted(self):
-        #        print('MyPlayer.onPlayBackStarted')
+        #        log('MyPlayer.onPlayBackStarted')
 
         tag = self.getVideoInfoTag()
         file  = self.getPlayingFile()
 
-        print('\tMyPlayer.file = {}'.format(file))
-        print('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
+        log('\tMyPlayer.file = {}'.format(file))
+        log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
+
+        from script import playing_torrserver_source
 
         if tag.getTagLine() != self.tagline:
-            if file and ':8090/' in file:
+
+            if playing_torrserver_source():
+                log('reopen stream')
+
                 item = xbmcgui.ListItem()
                 item.setPath(file)
                 item.setInfo('video', {'tagline' : self.tagline})
@@ -74,6 +83,9 @@ if __name__ == '__main__':
     while not monitor.abortRequested():
         if monitor.waitForAbort(10):
             break
+
+        if not player.isPlaying():
+            continue
 
         try:
             vit = player.getVideoInfoTag()
