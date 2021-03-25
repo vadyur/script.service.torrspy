@@ -63,6 +63,46 @@ def Test():
     Runner('plugin://script.module.torrspy/run')
     pass
 
+def get_info():
+    print('---TorrSpy: get_info---')
+    import xbmc, xbmcgui
+    xbmc.sleep(10*1000)
+    item = xbmcgui.ListItem()
+    url = xbmc.Player().getPlayingFile()
+    item.setPath(url)
+
+    from torrserve_stream import Engine
+
+    hash = Engine.extract_hash_from_play_url(url)
+    engine = Engine(hash=hash, host=settings.host, port=settings.port)
+
+    vi = engine.get_video_info()
+    if vi:
+        item.setInfo('video', vi)
+    else:
+        from detect import extract_title_date, extract_filename
+        filename = extract_filename(url)
+        title, year = extract_title_date(filename)
+        item.setInfo('video', 
+                        {'title': title,
+                        'year': year, 
+                        'rating': 7.6,
+                        'plot': 'Cool cool cool'})
+
+    art = engine.get_art()
+    if art:
+        item.setArt(art)
+
+    xbmc.Player().updateInfoTag(item)
+    print('---TorrSpy---')
+    print(xbmc.Player().getPlayingFile())
+
+def open_settings():
+    import xbmcaddon
+    addon = xbmcaddon.Addon()
+    addon.openSettings()
+
+
 if __name__ == '__main__':
     #Runner(sys.argv[0])
     print('---TorrSpy---')
@@ -70,27 +110,13 @@ if __name__ == '__main__':
         print(i)
     print('---TorrSpy---')
 
-    if sys.argv.index('get_info') == 1:
-        print('---TorrSpy: get_info---')
+    def arg_exists(arg, index):
+        try:
+            return sys.argv.index(arg) == index
+        except ValueError:
+            return False
 
-        import xbmc, xbmcgui
-        xbmc.sleep(10*1000)
-
-        from detect import extract_title_date, extract_filename
-
-        item = xbmcgui.ListItem()
-        url = xbmc.Player().getPlayingFile()
-        item.setPath(url)
-
-        filename = extract_filename(url)
-        title, year = extract_title_date(filename)
-
-        item.setInfo('video', 
-                    {'title': title,
-                    'year': year, 
-                    'rating': 7.6,
-                    'plot': 'Cool cool cool'})
-        xbmc.Player().updateInfoTag(item)
-
-        print('---TorrSpy---')
-        print(xbmc.Player().getPlayingFile())
+    if arg_exists('get_info', 1):
+        get_info()
+    else:
+        open_settings()

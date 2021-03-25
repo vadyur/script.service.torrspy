@@ -5,6 +5,8 @@
     <import addon="xbmc.python" version="2.26.0"/>
     <import addon="script.module.torrserver"/>
     <import addon="script.module.requests"/>
+    <import addon="script.module.vd-common"/>
+    <import addon="script.module.vsdbg" optional="true"/>
   </requires>
 
   <extension point="xbmc.service" library="src/service.py"/>
