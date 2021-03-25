@@ -14,7 +14,13 @@
     <platform>all</platform>
     <summary lang="ru">TorrSpy</summary>
     <description lang="ru">TorrSpy</description>
+    
+    <assets>
+        <icon>resources/icon.png</icon>
+    </assets>
   </extension>
+  
+  
 
 </addon>
 
