@@ -10,7 +10,9 @@
   </requires>
 
   <extension point="xbmc.service" library="src/service.py"/>
-  <extension point="xbmc.python.script" library="src/script.py"/>
+  <extension point="xbmc.python.script" library="src/script.py">
+    <provides>executable</provides>
+  </extension>
 
   <extension point="xbmc.addon.metadata">
     <platform>all</platform>
