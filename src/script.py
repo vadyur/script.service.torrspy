@@ -1,5 +1,7 @@
 import sys
 
+import xbmc, xbmcaddon
+
 from sys import version_info
 
 if version_info >= (3, 0, 0):
@@ -9,10 +11,15 @@ else:
 
 from torrserve_stream import Settings
 
-def addon_title():
-    return 'TorrSpy'
+addon = xbmcaddon.Addon()
 
-settings = Settings()
+def addon_title():
+    return addon.getAddonInfo('name')
+
+def addon_setting(id):
+    return addon.getSetting(id)
+
+ts_settings = Settings()
 
 def playing_torrserver_source():
     import xbmc
@@ -21,7 +28,7 @@ def playing_torrserver_source():
     if player.isPlayingVideo():
         name = player.getPlayingFile()
         if name:
-            if ':{}/'.format(settings.port) in name:
+            if ':{}/'.format(ts_settings.port) in name:
                 return True
     return False
 
@@ -69,7 +76,7 @@ def Test():
 def get_info():
     print('---TorrSpy: get_info---')
     import xbmc, xbmcgui
-    xbmc.sleep(10*1000)
+    xbmc.sleep(2*1000)
     item = xbmcgui.ListItem()
     url = xbmc.Player().getPlayingFile()
     item.setPath(url)
@@ -77,7 +84,7 @@ def get_info():
     from torrserve_stream import Engine
 
     hash = Engine.extract_hash_from_play_url(url)
-    engine = Engine(hash=hash, host=settings.host, port=settings.port)
+    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
 
     vi = engine.get_video_info()
     if vi:
@@ -119,7 +126,17 @@ def create_playlists():
 
 def create_sources():
     from xbmcgui import Dialog
-    Dialog().ok(addon_title(), 'Not implemented')
+    # Dialog().ok(addon_title(), 'Not implemented')
+
+    from xbmcaddon import Addon
+
+    base_path = addon_setting('base_path')
+    restart_msg = u'Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?'
+
+    from vdlib.kodi.sources import create_movies_and_tvshows
+    if create_movies_and_tvshows(base_path):
+        if Dialog().yesno(addon_title(), restart_msg):
+            xbmc.executebuiltin('Quit')
 
 def main():
     #Runner(sys.argv[0])

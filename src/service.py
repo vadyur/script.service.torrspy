@@ -164,7 +164,7 @@ def main():
     player = MyPlayer()
 
     while not monitor.abortRequested():
-        if monitor.waitForAbort(10):
+        if monitor.waitForAbort(2):
             break
 
         if not player.isPlaying():
