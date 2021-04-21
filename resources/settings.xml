@@ -10,8 +10,11 @@
     <setting type="action" id="create_sources" enable="false"
         action="RunScript(script.service.torrspy,create_sources)" 
         label="Создать источники для медиатеки"/>
-    <setting type="action" id="create_playlists" option="close"
+    <setting type="action" id="create_playlists"
         action="RunScript(script.service.torrspy,create_playlists)" 
         label="Создать плейлисты для каналов Android TV" />
+    <setting type="action" id="install_torrserve_next" enable="!System.HasAddon(plugin.video.torrserve-next)"
+        action="InstallAddon(plugin.video.torrserve-next)" 
+        label="Установить `TorrServer Client NEXT!`" />
   </category>
 </settings>

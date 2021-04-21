@@ -1,4 +1,3 @@
-import urllib
 import xbmc, xbmcgui, xbmcaddon
 
 from sys import version_info
@@ -42,14 +41,83 @@ def Test():
     RunPlugin("run")
 
 class MyMonitor(xbmc.Monitor):
-    pass
 
-title = 'My cool new title'
+    def onSettingsChanged(self):
+        pass
 
 class MyPlayer(xbmc.Player):
 
-    title = None
     tagline = '##TorrSpy##'
+
+    def getVideoInfo(self):
+        tag = self.getVideoInfoTag()
+
+        result = {}
+
+        if tag.getMediaType() != 'video':
+            return result
+
+        def _is_string_type(s):
+            if isinstance(s, str):
+                return True
+            elif version_info < (3, 0) and isinstance(s, unicode):  # type: ignore
+                return True
+            return False
+
+        def _integer(i):
+            return int(i)
+
+        def _string_or_list_of_strings(s):
+            if _is_string_type(s) and ',' in s:
+                return s.split(',')
+            return s
+
+        def _string(s):
+            return s
+
+        def _list(l):
+            if _is_string_type(l):
+                return l.split(',')
+            return l
+
+        def _float(f):
+            return f
+
+        fields = [
+            ('dbid',        tag.getDbId,            _integer),
+            ('director',    tag.getDirector,        _string_or_list_of_strings),
+            ('credits',     tag.getWritingCredits,  _string_or_list_of_strings),
+            ('genre',       tag.getGenre,           _string_or_list_of_strings),
+            ('tagline',     tag.getTagLine,         _string),
+            ('plotoutline', tag.getPlotOutline,     _string),
+            ('plot',        tag.getPlot,            _string),
+            ('title',       tag.getTitle,           _string),
+            ('originaltitle',tag.getOriginalTitle,  _string),
+            ('tvshowtitle', tag.getTVShowTitle,     _string),
+            ('votes',       tag.getVotes,           _string),
+            ('cast',        tag.getCast,            _list),
+            # ('', tag.getFile),
+            # ('', tag.getPath),
+            # ('', tag.getFilenameAndPath),
+            ('imdbnumber',  tag.getIMDBNumber,      _string),
+            ('season',      tag.getSeason,          _integer),
+            ('episode',     tag.getEpisode,         _integer),
+            ('year',        tag.getYear,            _integer),
+            ('rating',      tag.getRating,          _float),
+            ('userrating',  tag.getUserRating,      _integer),
+            ('playcount',   tag.getPlayCount,       _integer),
+            ('lastplayed',  tag.getLastPlayed,      _string),
+            ('premiered',   tag.getPremiered,       _string),
+            # ('', tag.getFirstAired),
+            ('trailer',     tag.getTrailer,         _string),
+        ]
+
+        for field, func, data_type in fields:
+            res = func()
+            if res:
+                result[field] = data_type(res)
+
+        return result
 
     def onAVStarted(self):
         log('MyPlayer.onAVStarted')
@@ -63,20 +131,35 @@ class MyPlayer(xbmc.Player):
         log('\tMyPlayer.file = {}'.format(file))
         log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
 
-        from script import playing_torrserver_source
+        if tag.getTitle():
+            log('Keep current info')
+            return
+
+        from .script import playing_torrserver_source
 
         if tag.getTagLine() != self.tagline:
 
             if playing_torrserver_source():
-                log('reopen stream')
 
                 item = xbmcgui.ListItem()
                 item.setPath(file)
-                item.setInfo('video', {'tagline' : self.tagline})
-                self.play(file, item, False)
+
+                video_info = {'tagline' : self.tagline}
+                item.setInfo('video', video_info)
+
+                self.updateInfoTag(item)                
+                tag = self.getVideoInfoTag()
+
+                if tag.getTagLine() != self.tagline:
+                    log('reopen stream')
+                    video_info.update(self.getVideoInfo())
+                    item.setInfo('video', video_info)
+                    self.play(file, item, False)
+                else:
+                    log('Keep stream opened')
 
 
-if __name__ == '__main__':
+def main():
     monitor = MyMonitor()
     player = MyPlayer()
 

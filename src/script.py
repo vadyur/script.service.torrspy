@@ -83,14 +83,12 @@ def get_info():
     if vi:
         item.setInfo('video', vi)
     else:
-        from detect import extract_title_date, extract_filename     # type: ignore
+        from .detect import extract_title_date, extract_filename     # type: ignore
         filename = extract_filename(url)
         title, year = extract_title_date(filename)
         item.setInfo('video', 
                         {'title': title,
-                        'year': year, 
-                        'rating': 7.6,
-                        'plot': 'Cool cool cool'})
+                        'year': year})
 
     art = engine.get_art()
     if art:
@@ -123,7 +121,7 @@ def create_sources():
     from xbmcgui import Dialog
     Dialog().ok(addon_title(), 'Not implemented')
 
-if __name__ == '__main__':
+def main():
     #Runner(sys.argv[0])
     print('---TorrSpy---')
     for i in sys.argv:
