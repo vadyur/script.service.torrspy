@@ -4,14 +4,16 @@ import xbmc, xbmcaddon
 
 from sys import version_info
 
-if version_info >= (3, 0, 0):
+if version_info >= (3, 0):
     from urllib.parse import urlparse, parse_qs
 else:
     from urlparse import urlparse, parse_qs    # type: ignore
 
 from torrserve_stream import Settings
+ts_settings = Settings()
 
-addon = xbmcaddon.Addon()
+addon = xbmcaddon.Addon('script.service.torrspy')
+addon_id = addon.getAddonInfo('id')
 
 def addon_title():
     return addon.getAddonInfo('name')
@@ -19,7 +21,9 @@ def addon_title():
 def addon_setting(id):
     return addon.getSetting(id)
 
-ts_settings = Settings()
+def log(s):
+    message = '[{}: script.py]: {}'.format(addon_id, s)
+    xbmc.log(message)
 
 def playing_torrserver_source():
     import xbmc
@@ -74,7 +78,7 @@ def Test():
     pass
 
 def get_info():
-    print('---TorrSpy: get_info---')
+    log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
     xbmc.sleep(2*1000)
     item = xbmcgui.ListItem()
@@ -88,8 +92,10 @@ def get_info():
 
     vi = engine.get_video_info()
     if vi:
+        log('Get info from TorrServer')
         item.setInfo('video', vi)
     else:
+        log('Extract info')
         from .detect import extract_title_date, extract_filename     # type: ignore
         filename = extract_filename(url)
         title, year = extract_title_date(filename)
@@ -102,8 +108,8 @@ def get_info():
         item.setArt(art)
 
     xbmc.Player().updateInfoTag(item)
-    print('---TorrSpy---')
-    print(xbmc.Player().getPlayingFile())
+    log('---TorrSpy---')
+    log(xbmc.Player().getPlayingFile())
 
 def open_settings():
     import xbmcaddon
@@ -140,10 +146,10 @@ def create_sources():
 
 def main():
     #Runner(sys.argv[0])
-    print('---TorrSpy---')
+    log('---TorrSpy---')
     for i in sys.argv:
-        print(i)
-    print('---TorrSpy---')
+        log(i)
+    log('---TorrSpy---')
 
     def arg_exists(arg, index):
         try:
