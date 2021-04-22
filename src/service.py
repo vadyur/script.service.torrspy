@@ -56,7 +56,7 @@ class MyPlayer(xbmc.Player):
 
         result = {}
 
-        if tag.getMediaType() != 'video':
+        if not self.isPlayingVideo():
             return result
 
         def _is_string_type(s):
@@ -167,36 +167,47 @@ class MyPlayer(xbmc.Player):
         self.end_playback()
 
     def end_playback(self):
-        import vsdbg
-        vsdbg.breakpoint()
+        video_info  = self.video_info.video_info
+        play_url    = self.video_info.play_url
 
-        if self.video_info.time < self.video_info.total_time:
-            message = u'Info:\n\t{}\n\t{}\n\t{}'.format(
-                self.video_info.original_title, 
-                self.video_info.year, 
-                self.video_info.media_type)
-            alert(message)
+        if not video_info:
+            log('video_info does not exists')
+            return
+
+        if self.video_info.time and self.video_info.total_time:
+            percent = self.video_info.time / self.video_info.total_time * 100
             if self.video_info.media_type == 'movie':
-                if self.video_info.original_title and self.video_info.year:
-                    name = u'{}({})'.format(self.video_info.original_title, self.video_info.year)
-                    strm = name + '.strm'
-                    nfo = name + '.nfo'
+                if self.video_info.time >= 180 and percent < 90: 
+                    from .script import save_movie
+                    save_movie(video_info, play_url)
+
+            log("media_type = '{}'".format(self.video_info.media_type))
+
+        self.video_info.reset()
 
 class VideoInfo(object):
     def __init__(self, player):
         self.player = player
+        self.reset()
 
     def update(self):
         if self.player.isPlayingVideo():
-            video_info_tag = self.getVideoInfoTag()
+            video_info_tag  = self.player.getVideoInfoTag()
 
-            self.time = self.getTime()
-            self.total_time = self.getTotalTime()
-            self.original_title = video_info_tag.getOriginalTitle()
-            self.year = video_info_tag.getYear()
-            self.imdbnumber = video_info_tag.getIMDBNumber()
-            self.play_count = video_info_tag.getPlayCount()
+            self.time       = self.player.getTime()
+            self.total_time = self.player.getTotalTime()
+
+            self.video_info = self.player.getVideoInfo()
             self.media_type = video_info_tag.getMediaType()
+
+            self.play_url   = self.player.getPlayingFile()
+
+    def reset(self):
+        self.time       = None
+        self.total_time = None
+        self.video_info = None
+        self.media_type = None
+        self.play_url   = None
 
 def main():
     monitor = MyMonitor()

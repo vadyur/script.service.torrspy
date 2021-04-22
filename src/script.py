@@ -1,8 +1,12 @@
 import sys
+import json
 
 import xbmc, xbmcaddon
 
 from sys import version_info
+
+from vdlib.util import filesystem
+from vdlib.kodi.compat import translatePath
 
 if version_info >= (3, 0):
     from urllib.parse import urlparse, parse_qs
@@ -20,6 +24,13 @@ def addon_title():
 
 def addon_setting(id):
     return addon.getSetting(id)
+
+def addon_base_path():
+    base_path = addon_setting('base_path')
+    return translatePath(base_path)
+
+def make_path_to_base_relative(path):
+    return filesystem.join(addon_base_path(), path)
 
 def log(s):
     message = '[{}: script.py]: {}'.format(addon_id, s)
@@ -77,6 +88,61 @@ def Test():
     Runner('plugin://script.module.torrspy/run')
     pass
 
+def save_video_info(hash, video_info):
+    if 'imdbnumber' not in video_info:
+        return
+
+    log('---TorrSpy: save_info---')
+
+    with filesystem.fopen(get_video_info_path(hash, create_path=True), 'w') as vi_out: 
+        json.dump(video_info, vi_out)
+
+def get_video_info_path(hash, create_path=False):
+    path = make_path_to_base_relative('.data')
+    if create_path and not filesystem.exists(path):
+        filesystem.makedirs(path)
+    filename = '{}.video_info.json'.format(hash)
+    return filesystem.join(path, filename)
+
+def load_video_info(hash):
+    video_info_path = get_video_info_path(hash)
+    if filesystem.exists(video_info_path):
+        with filesystem.fopen(video_info_path, 'r') as vi_in:
+            return json.load(vi_in)
+
+def save_strm(file_path, play_url):
+    # action="play_now", magnet=magneturi, selFile=0
+    from vdlib.util import urlencode
+
+    params = {
+            'action' : 'play_now',
+            'play_url': play_url
+        }
+    queryString = urlencode(params, encoding='utf-8')
+
+    link = 'plugin://{}/?{}'.format(
+        'plugin.video.torrserve-next',
+        queryString
+    )
+
+    with filesystem.fopen(file_path, 'w') as out:
+        out.write(link)
+
+def save_movie(video_info, play_url):
+
+    import xbmcgui
+    save_to_lib = xbmcgui.Dialog().yesno(addon_title(), u'Кино не досмотрено. Сохранить для последующего просмотра?')
+    if not save_to_lib:
+        return
+
+    original_title = video_info.get('original_title')
+    year = video_info.get('year')
+    if original_title and year:
+        name = u'{}({})'.format(original_title, year)
+        save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url)
+        #    nfo = name + '.nfo'
+
+
 def get_info():
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
@@ -90,18 +156,21 @@ def get_info():
     hash = Engine.extract_hash_from_play_url(url)
     engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
 
-    vi = engine.get_video_info()
-    if vi:
+    video_info = engine.get_video_info()
+    if video_info:
         log('Get info from TorrServer')
-        item.setInfo('video', vi)
-    else:
+
+    if not video_info:
+        video_info = load_video_info(hash)
+
+    if not video_info:
         log('Extract info')
         from .detect import extract_title_date, extract_filename     # type: ignore
         filename = extract_filename(url)
         title, year = extract_title_date(filename)
-        item.setInfo('video', 
-                        {'title': title,
-                        'year': year})
+        video_info = {'title': title, 'year': year}
+
+    item.setInfo('video', video_info)
 
     art = engine.get_art()
     if art:
@@ -110,6 +179,8 @@ def get_info():
     xbmc.Player().updateInfoTag(item)
     log('---TorrSpy---')
     log(xbmc.Player().getPlayingFile())
+
+    save_video_info(hash, video_info)
 
 def open_settings():
     import xbmcaddon
@@ -136,7 +207,7 @@ def create_sources():
 
     from xbmcaddon import Addon
 
-    base_path = addon_setting('base_path')
+    base_path = addon_base_path()
     restart_msg = u'Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?'
 
     from vdlib.kodi.sources import create_movies_and_tvshows
