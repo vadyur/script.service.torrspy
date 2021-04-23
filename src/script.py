@@ -95,7 +95,7 @@ def save_video_info(hash, video_info):
     log('---TorrSpy: save_info---')
 
     with filesystem.fopen(get_video_info_path(hash, create_path=True), 'w') as vi_out: 
-        json.dump(video_info, vi_out)
+        json.dump(video_info, vi_out, indent=4, ensure_ascii=False)
 
 def get_video_info_path(hash, create_path=False):
     path = make_path_to_base_relative('.data')
@@ -114,6 +114,10 @@ def save_strm(file_path, play_url):
     # action="play_now", magnet=magneturi, selFile=0
     from vdlib.util import urlencode
 
+    log('def save_strm(file_path, play_url)')
+
+    log('file_path is "{}"'.format(file_path))
+
     params = {
             'action' : 'play_now',
             'play_url': play_url
@@ -125,20 +129,23 @@ def save_strm(file_path, play_url):
         queryString
     )
 
+    log('link is {}'.format(link))
+
     with filesystem.fopen(file_path, 'w') as out:
         out.write(link)
 
 def save_movie(video_info, play_url):
 
-    import xbmcgui
-    save_to_lib = xbmcgui.Dialog().yesno(addon_title(), u'Кино не досмотрено. Сохранить для последующего просмотра?')
-    if not save_to_lib:
-        return
-
-    original_title = video_info.get('original_title')
+    original_title = video_info.get('originaltitle')
     year = video_info.get('year')
     if original_title and year:
+        import xbmcgui
+        save_to_lib = xbmcgui.Dialog().yesno(addon_title(), u'Кино не досмотрено. Сохранить для последующего просмотра?')
+        if not save_to_lib:
+            return
+
         name = u'{}({})'.format(original_title, year)
+        log('name is {}'.format(name))
         save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url)
         #    nfo = name + '.nfo'
 

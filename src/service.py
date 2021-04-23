@@ -176,7 +176,9 @@ class MyPlayer(xbmc.Player):
 
         if self.video_info.time and self.video_info.total_time:
             percent = self.video_info.time / self.video_info.total_time * 100
+            log('percent is {}'.format(percent))
             if self.video_info.media_type == 'movie':
+                log('self.video_info.time is {}'.format(self.video_info.time))
                 if self.video_info.time >= 180 and percent < 90: 
                     from .script import save_movie
                     save_movie(video_info, play_url)
