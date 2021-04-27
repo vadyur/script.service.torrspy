@@ -6,7 +6,8 @@ import xbmc, xbmcaddon
 from sys import version_info
 
 from vdlib.util import filesystem
-from vdlib.kodi.compat import translatePath
+
+from .torrspy.info import addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
 
 if version_info >= (3, 0):
     from urllib.parse import urlparse, parse_qs
@@ -16,23 +17,8 @@ else:
 from torrserve_stream import Settings
 ts_settings = Settings()
 
-addon = xbmcaddon.Addon('script.service.torrspy')
-addon_id = addon.getAddonInfo('id')
-
-def addon_title():
-    return addon.getAddonInfo('name')
-
-def addon_setting(id):
-    return addon.getSetting(id)
-
-def addon_base_path():
-    base_path = addon_setting('base_path')
-    return translatePath(base_path)
-
-def make_path_to_base_relative(path):
-    return filesystem.join(addon_base_path(), path)
-
 def log(s):
+    from .torrspy.info import addon_id
     message = '[{}: script.py]: {}'.format(addon_id, s)
     xbmc.log(message)
 
@@ -88,29 +74,18 @@ def Test():
     Runner('plugin://script.module.torrspy/run')
     pass
 
-def save_video_info(hash, video_info):
-    if 'imdbnumber' not in video_info:
-        return
 
-    log('---TorrSpy: save_info---')
 
-    with filesystem.fopen(get_video_info_path(hash, create_path=True), 'w') as vi_out: 
-        json.dump(video_info, vi_out, indent=4, ensure_ascii=False)
+def get_sort_index(play_url):
+    from torrserve_stream import Engine
+    hash = Engine.extract_hash_from_play_url(play_url)
+    name = Engine.extract_filename_from_play_url(play_url)
 
-def get_video_info_path(hash, create_path=False):
-    path = make_path_to_base_relative('.data')
-    if create_path and not filesystem.exists(path):
-        filesystem.makedirs(path)
-    filename = '{}.video_info.json'.format(hash)
-    return filesystem.join(path, filename)
+    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
+    return engine.get_ts_index(name)
 
-def load_video_info(hash):
-    video_info_path = get_video_info_path(hash)
-    if filesystem.exists(video_info_path):
-        with filesystem.fopen(video_info_path, 'r') as vi_in:
-            return json.load(vi_in)
 
-def save_strm(file_path, play_url):
+def save_strm(file_path, play_url, sort_index):
     # action="play_now", magnet=magneturi, selFile=0
     from vdlib.util import urlencode
 
@@ -118,9 +93,14 @@ def save_strm(file_path, play_url):
 
     log('file_path is "{}"'.format(file_path))
 
+    base_path = addon_base_path()
+    strm_path = filesystem.relpath(file_path, base_path)
+
     params = {
-            'action' : 'play_now',
-            'play_url': play_url
+            'action' : 'play_strm',
+            'play_url': play_url,
+            'sort_index': sort_index,
+            'strm_path': strm_path
         }
     queryString = urlencode(params, encoding='utf-8')
 
@@ -134,7 +114,7 @@ def save_strm(file_path, play_url):
     with filesystem.fopen(file_path, 'w') as out:
         out.write(link)
 
-def save_movie(video_info, play_url):
+def save_movie(video_info, play_url, sort_index):
 
     original_title = video_info.get('originaltitle')
     year = video_info.get('year')
@@ -146,7 +126,7 @@ def save_movie(video_info, play_url):
 
         name = u'{}({})'.format(original_title, year)
         log('name is {}'.format(name))
-        save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url)
+        save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url, sort_index)
         #    nfo = name + '.nfo'
 
 
@@ -188,6 +168,7 @@ def get_info():
     log(xbmc.Player().getPlayingFile())
 
     save_video_info(hash, video_info)
+    save_art(hash, art)
 
 def open_settings():
     import xbmcaddon

@@ -7,7 +7,7 @@ if version_info >= (3, 0, 0):
 else:
     from urllib import quote_plus
 
-from .script import alert, playing_torrserver_source
+from .script import alert, get_sort_index, playing_torrserver_source
 
 addon = xbmcaddon.Addon()
 addon_id = addon.getAddonInfo('id')
@@ -133,7 +133,7 @@ class MyPlayer(xbmc.Player):
         log('\tMyPlayer.file = {}'.format(file))
         log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
 
-        if tag.getTitle():
+        if tag.getOriginalTitle():
             log('Keep current info')
             return
 
@@ -169,6 +169,7 @@ class MyPlayer(xbmc.Player):
     def end_playback(self):
         video_info  = self.video_info.video_info
         play_url    = self.video_info.play_url
+        sort_index  = self.video_info.sort_index
 
         if not video_info:
             log('video_info does not exists')
@@ -181,7 +182,8 @@ class MyPlayer(xbmc.Player):
                 log('self.video_info.time is {}'.format(self.video_info.time))
                 if self.video_info.time >= 180 and percent < 90: 
                     from .script import save_movie
-                    save_movie(video_info, play_url)
+                    save_movie(video_info, play_url, sort_index)
+            elif self.video_info.media_type == 'tvshow':
 
             log("media_type = '{}'".format(self.video_info.media_type))
 
@@ -203,6 +205,7 @@ class VideoInfo(object):
             self.media_type = video_info_tag.getMediaType()
 
             self.play_url   = self.player.getPlayingFile()
+            self.sort_index = get_sort_index(self.play_url)
 
     def reset(self):
         self.time       = None
@@ -210,6 +213,7 @@ class VideoInfo(object):
         self.video_info = None
         self.media_type = None
         self.play_url   = None
+        self.sort_index = None
 
 def main():
     monitor = MyMonitor()
