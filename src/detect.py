@@ -57,12 +57,33 @@ def test(url):
 
     return n, t, d, r
 
-def find_imdbnumber(video_info):
+def find_tmdb_movie_item(video_info):
     from vdlib.scrappers.movieapi import TMDB_API
     tmdb = TMDB_API()
     original_title = video_info.get('originaltitle')
     if original_title:
-        res = tmdb.search(original_title)
-        if res:
-            pass
+        results = tmdb.search(original_title)
+        if len(results) == 1:
+            return results[0]
+
+        filters = [
+            'originaltitle',
+            'plot',
+            'year',
+            'title'
+        ]
+
+        for field in filters:
+            def filter_func(res):
+                info = res.get_info()
+                return info.get(field) == video_info.get(field)
+            if field in video_info:
+                filtered = list(filter(filter_func, results))
+                if len(filtered) == 1:
+                    results = filtered
+                    break
+
+        if len(results):
+            return results[0]
+
 
