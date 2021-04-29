@@ -51,6 +51,10 @@ class MyPlayer(xbmc.Player):
 
     tagline = '##TorrSpy##'
 
+    def __init__(self):
+        self.video_info = PlayerVideoInfo(self)
+        super().__init__()
+
     def getVideoInfo(self):
         tag = self.getVideoInfoTag()
 
@@ -178,34 +182,43 @@ class MyPlayer(xbmc.Player):
         if self.video_info.time and self.video_info.total_time:
             percent = self.video_info.time / self.video_info.total_time * 100
             log('percent is {}'.format(percent))
+            log('self.video_info.time is {}'.format(self.video_info.time))
+
             if self.video_info.media_type == 'movie':
-                log('self.video_info.time is {}'.format(self.video_info.time))
                 if self.video_info.time >= 180 and percent < 90: 
                     from .script import save_movie
                     save_movie(video_info, play_url, sort_index)
             elif self.video_info.media_type == 'tvshow':
+                if percent >= 50:
+                    from .script import save_tvshow
+                    save_tvshow(video_info, play_url, sort_index)
 
             log("media_type = '{}'".format(self.video_info.media_type))
 
         self.video_info.reset()
 
-class VideoInfo(object):
+class PlayerVideoInfo(object):
     def __init__(self, player):
-        self.player = player
+        self.player = player        # type: MyPlayer
         self.reset()
 
     def update(self):
         if self.player.isPlayingVideo():
-            video_info_tag  = self.player.getVideoInfoTag()
+            try:
+                video_info_tag  = self.player.getVideoInfoTag()
 
-            self.time       = self.player.getTime()
-            self.total_time = self.player.getTotalTime()
+                self.time       = self.player.getTime()
+                self.total_time = self.player.getTotalTime()
 
-            self.video_info = self.player.getVideoInfo()
-            self.media_type = video_info_tag.getMediaType()
+                self.video_info = self.player.getVideoInfo()
+                self.media_type = video_info_tag.getMediaType()
 
-            self.play_url   = self.player.getPlayingFile()
-            self.sort_index = get_sort_index(self.play_url)
+                self.play_url   = self.player.getPlayingFile()
+                self.sort_index = get_sort_index(self.play_url)
+            except BaseException:
+                from vdlib.util.log import print_tb
+                print_tb()
+                self.reset()
 
     def reset(self):
         self.time       = None
@@ -218,8 +231,6 @@ class VideoInfo(object):
 def main():
     monitor = MyMonitor()
     player = MyPlayer()
-    video_info = VideoInfo(player)
-    player.video_info = video_info
 
     while not monitor.abortRequested():
         if monitor.waitForAbort(2):
@@ -233,7 +244,7 @@ def main():
         except RuntimeError:
             continue
 
-        video_info.update()
+        player.video_info.update()
 
         if vit.getTagLine() == player.tagline:
             log('reset tagline')

@@ -15,14 +15,14 @@ cleanstrings = [
    r'(\[.*\])',
 ]
 
-def extract_title_date(filename):
-    title = filename
+def is_video(filename):
     for ext in videoextensions:
         if filename.endswith(ext):
-            title = os.path.splitext(filename)[0]
-            break
-    if filename == title:
-        return None
+            return True
+    return False
+
+def extract_title_date(filename):
+    title = filename
 
     m = re.search(cleandatetime, title)
     title = m.group(1) if m else title
@@ -56,4 +56,13 @@ def test(url):
     r = from_translit(t)
 
     return n, t, d, r
+
+def find_imdbnumber(video_info):
+    from vdlib.scrappers.movieapi import TMDB_API
+    tmdb = TMDB_API()
+    original_title = video_info.get('originaltitle')
+    if original_title:
+        res = tmdb.search(original_title)
+        if res:
+            pass
 

@@ -1,8 +1,5 @@
 import sys
-import json
-
-import xbmc, xbmcaddon
-
+import xbmc
 from sys import version_info
 
 from vdlib.util import filesystem
@@ -120,7 +117,8 @@ def save_movie(video_info, play_url, sort_index):
     year = video_info.get('year')
     if original_title and year:
         import xbmcgui
-        save_to_lib = xbmcgui.Dialog().yesno(addon_title(), u'Кино не досмотрено. Сохранить для последующего просмотра?')
+        save_to_lib = xbmcgui.Dialog().yesno(addon_title(), 
+                u'Кино не досмотрено. Сохранить его в медиатеку для последующего просмотра?')
         if not save_to_lib:
             return
 
@@ -128,6 +126,22 @@ def save_movie(video_info, play_url, sort_index):
         log('name is {}'.format(name))
         save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url, sort_index)
         #    nfo = name + '.nfo'
+
+
+def save_tvshow(video_info, play_url, sort_index):
+    original_title = video_info.get('originaltitle')
+
+    if original_title:
+        import xbmcgui
+        save_to_lib = xbmcgui.Dialog().yesno(addon_title(), 
+                u'Вы смотрели эпизод сериала. Сохранить сериал в медиатеку для последующего просмотра?')
+        if not save_to_lib:
+            return
+
+        from vdlib.util import filesystem
+        tvshow_path = make_path_to_base_relative(filesystem.join('TVShows', original_title))
+        if not filesystem.exists(tvshow_path):
+            filesystem.makedirs(tvshow_path)
 
 
 def get_info():
@@ -156,6 +170,12 @@ def get_info():
         filename = extract_filename(url)
         title, year = extract_title_date(filename)
         video_info = {'title': title, 'year': year}
+
+    if 'imdbnumber' not in video_info:
+        from .detect import find_imdbnumber
+        imdbnumber = find_imdbnumber(video_info)
+        if imdbnumber:
+            video_info['imdbnumber'] = imdbnumber
 
     item.setInfo('video', video_info)
 
