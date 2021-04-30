@@ -1,4 +1,5 @@
 import sys
+from vdlib.scrappers.movieapi import imdb_cast
 import xbmc
 from sys import version_info
 
@@ -130,18 +131,39 @@ def save_movie(video_info, play_url, sort_index):
 
 def save_tvshow(video_info, play_url, sort_index):
     original_title = video_info.get('originaltitle')
-
-    if original_title:
+    year = video_info.get('year')
+    imdb = video_info.get('imdbnumber')
+    if original_title and year:
         import xbmcgui
         save_to_lib = xbmcgui.Dialog().yesno(addon_title(), 
                 u'Вы смотрели эпизод сериала. Сохранить сериал в медиатеку для последующего просмотра?')
+
         if not save_to_lib:
             return
 
         from vdlib.util import filesystem
-        tvshow_path = make_path_to_base_relative(filesystem.join('TVShows', original_title))
+        tvshow_dirname = u'{} ({})'.format(original_title, year)
+        log(tvshow_dirname)
+
+        tvshow_path = make_path_to_base_relative(filesystem.join('TVShows', tvshow_dirname))
         if not filesystem.exists(tvshow_path):
             filesystem.makedirs(tvshow_path)
+
+        from vdlib.scrappers.tvshowapi import TVShowAPI, parse_torrent
+        api = TVShowAPI(original_title, video_info.get('title'), imdb)
+
+        from torrserve_stream import Engine
+
+        hash = Engine.extract_hash_from_play_url(play_url)
+        log(hash)
+        ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
+
+        info = {'name': ts_engine.stat().get('Name')}
+        for f in ts_engine.files():
+            path = f['path'].split('/')
+            info.append({'path': path})
+
+        files = parse_torrent(info)
 
 
 def get_info():
@@ -161,6 +183,8 @@ def get_info():
     if video_info:
         log('Get info from TorrServer')
 
+    art = engine.get_art()
+
     if not video_info:
         video_info = load_video_info(hash)
 
@@ -171,21 +195,30 @@ def get_info():
         title, year = extract_title_date(filename)
         video_info = {'title': title, 'year': year}
 
-    if 'imdbnumber' not in video_info:
-        from .detect import find_imdbnumber
-        imdbnumber = find_imdbnumber(video_info)
-        if imdbnumber:
-            video_info['imdbnumber'] = imdbnumber
+    def update_listitem(video_info, art):
+        if video_info: item.setInfo('video', video_info)
+        if art: item.setArt(art)
 
-    item.setInfo('video', video_info)
+        xbmc.Player().updateInfoTag(item)
 
-    art = engine.get_art()
-    if art:
-        item.setArt(art)
-
-    xbmc.Player().updateInfoTag(item)
     log('---TorrSpy---')
     log(xbmc.Player().getPlayingFile())
+
+    update_listitem(video_info, art)
+
+    if 'imdbnumber' not in video_info:
+        from .detect import find_tmdb_movie_item
+        tmdb_movie_item = find_tmdb_movie_item(video_info)
+        imdbnumber = tmdb_movie_item.imdb()
+        video_info.update(tmdb_movie_item.get_info())
+        if imdbnumber:
+            video_info['imdbnumber'] = imdbnumber
+        if tmdb_movie_item.type == 'movie':
+            video_info['mediatype'] = 'movie'
+        elif video_info['mediatype'] == 'tv':
+            video_info['mediatype'] = 'tvshow'
+
+        update_listitem(video_info, art)
 
     save_video_info(hash, video_info)
     save_art(hash, art)
