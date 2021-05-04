@@ -7,7 +7,7 @@ if version_info >= (3, 0, 0):
 else:
     from urllib import quote_plus
 
-from .script import alert, get_sort_index, playing_torrserver_source
+from .script import playing_torrserver_source
 
 addon = xbmcaddon.Addon()
 addon_id = addon.getAddonInfo('id')
@@ -52,6 +52,7 @@ class MyPlayer(xbmc.Player):
     tagline = '##TorrSpy##'
 
     def __init__(self):
+        from .torrspy.player_video_info import PlayerVideoInfo
         self.video_info = PlayerVideoInfo(self)
         super().__init__()
 
@@ -171,62 +172,8 @@ class MyPlayer(xbmc.Player):
         self.end_playback()
 
     def end_playback(self):
-        video_info  = self.video_info.video_info
-        play_url    = self.video_info.play_url
-        sort_index  = self.video_info.sort_index
-
-        if not video_info:
-            log('video_info does not exists')
-            return
-
-        if self.video_info.time and self.video_info.total_time:
-            percent = self.video_info.time / self.video_info.total_time * 100
-            log('percent is {}'.format(percent))
-            log('self.video_info.time is {}'.format(self.video_info.time))
-
-            if self.video_info.media_type == 'movie':
-                if self.video_info.time >= 180 and percent < 90: 
-                    from .script import save_movie
-                    save_movie(video_info, play_url, sort_index)
-            elif self.video_info.media_type == 'tvshow':
-                if percent >= 50:
-                    from .script import save_tvshow
-                    save_tvshow(video_info, play_url, sort_index)
-
-            log("media_type = '{}'".format(self.video_info.media_type))
-
-        self.video_info.reset()
-
-class PlayerVideoInfo(object):
-    def __init__(self, player):
-        self.player = player        # type: MyPlayer
-        self.reset()
-
-    def update(self):
-        if self.player.isPlayingVideo():
-            try:
-                video_info_tag  = self.player.getVideoInfoTag()
-
-                self.time       = self.player.getTime()
-                self.total_time = self.player.getTotalTime()
-
-                self.video_info = self.player.getVideoInfo()
-                self.media_type = video_info_tag.getMediaType()
-
-                self.play_url   = self.player.getPlayingFile()
-                self.sort_index = get_sort_index(self.play_url)
-            except BaseException:
-                from vdlib.util.log import print_tb
-                print_tb()
-                self.reset()
-
-    def reset(self):
-        self.time       = None
-        self.total_time = None
-        self.video_info = None
-        self.media_type = None
-        self.play_url   = None
-        self.sort_index = None
+        RunScript('end_playback', self.video_info.dumps())
+        self.video_info.reset()            
 
 def main():
     monitor = MyMonitor()

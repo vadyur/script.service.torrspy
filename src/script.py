@@ -1,11 +1,11 @@
 import sys
-from vdlib.scrappers.movieapi import imdb_cast
-import xbmc
+#from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
 
 from vdlib.util import filesystem
 
 from .torrspy.info import addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
+#from .torrspy.player_video_info import get_sort_index
 
 if version_info >= (3, 0):
     from urllib.parse import urlparse, parse_qs
@@ -18,6 +18,7 @@ ts_settings = Settings()
 def log(s):
     from .torrspy.info import addon_id
     message = '[{}: script.py]: {}'.format(addon_id, s)
+    import xbmc
     xbmc.log(message)
 
 def playing_torrserver_source():
@@ -39,56 +40,21 @@ def get_params(url):
     res = urlparse(url)
     return parse_qs(res.query)
 
-class Runner(object):
-    prefix = 'plugin://script.module.torrspy/'
-    tag = '##TorrSpy##'
-
-    def __init__(self, url):
-        alert(url)
-
-        command = url.replace(Runner.prefix, '')
-        self.__getattribute__(command)()
-        
-    def run(self):
-        if playing_torrserver_source():
-            import xbmc, xbmcgui, xbmcplugin
-
-            title = 'My cool new title'
-            xbmc_player = xbmc.Player()
-
-            vidIT = xbmc_player.getVideoInfoTag()
-
-            if vidIT.getTagLine() == self.tag:
-                return
-
-            item = xbmcgui.ListItem()
-            url = xbmc_player.getPlayingFile()
-            item.setPath(url)
-            item.setInfo('video', {'tagline' : self.tag})
-            xbmc_player.updateInfoTag(item)
-
-
-def Test():
-    Runner('plugin://script.module.torrspy/run')
-    pass
-
-
-
-def get_sort_index(play_url):
-    from torrserve_stream import Engine
-    hash = Engine.extract_hash_from_play_url(play_url)
-    name = Engine.extract_filename_from_play_url(play_url)
-
-    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
-    return engine.get_ts_index(name)
-
+def update_library(path=None):
+    import xbmc
+    if path:    
+        xbmc.executebuiltin('UpdateLibrary("video","{}")'.format(path))
+    else:
+        xbmc.executebuiltin('UpdateLibrary("video")')
 
 def save_strm(file_path, play_url, sort_index):
     # action="play_now", magnet=magneturi, selFile=0
     from vdlib.util import urlencode
+    from vdlib.kodi.compat import makeLegalFilename
+
+    file_path = makeLegalFilename(file_path)
 
     log('def save_strm(file_path, play_url)')
-
     log('file_path is "{}"'.format(file_path))
 
     base_path = addon_base_path()
@@ -141,6 +107,9 @@ def save_tvshow(video_info, play_url, sort_index):
         if not save_to_lib:
             return
 
+        import vsdbg
+        vsdbg.breakpoint()
+
         from vdlib.util import filesystem
         tvshow_dirname = u'{} ({})'.format(original_title, year)
         log(tvshow_dirname)
@@ -158,12 +127,26 @@ def save_tvshow(video_info, play_url, sort_index):
         log(hash)
         ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
 
-        info = {'name': ts_engine.stat().get('Name')}
-        for f in ts_engine.files():
+        info = {'name': ts_engine.stat().get('Name'), 
+                'files': []}
+        ts_engine_files = ts_engine.files()
+        for f in ts_engine_files:
             path = f['path'].split('/')
-            info.append({'path': path})
+            info['files'].append({'path': path})
 
         files = parse_torrent(info)
+        for item in files:
+            if not api.Episode(item['season'], item['episode']):
+                continue
+
+            season_path = filesystem.join(tvshow_path, 'Season {}'.format(item['season']))
+            if not filesystem.exists(season_path):
+                filesystem.makedirs(season_path)
+            filename = '{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, item['season'], item['episode'])
+            sort_index = item['index']
+            play_url = ts_engine.play_url(sort_index)
+            #sort_index = get_sort_index(play_url)
+            save_strm(filesystem.join(season_path, filename), play_url, sort_index)
 
 
 def get_info():
@@ -244,9 +227,8 @@ def create_playlists():
 
 def create_sources():
     from xbmcgui import Dialog
-    # Dialog().ok(addon_title(), 'Not implemented')
-
     from xbmcaddon import Addon
+    from xbmc import executebuiltin
 
     base_path = addon_base_path()
     restart_msg = u'Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?'
@@ -254,7 +236,35 @@ def create_sources():
     from vdlib.kodi.sources import create_movies_and_tvshows
     if create_movies_and_tvshows(base_path):
         if Dialog().yesno(addon_title(), restart_msg):
-            xbmc.executebuiltin('Quit')
+            executebuiltin('Quit')
+
+def end_playback(player_video_info_str):
+    from .torrspy.player_video_info import PlayerVideoInfo
+
+    pvi = PlayerVideoInfo(None)
+    pvi.loads(player_video_info_str)
+
+    video_info  = pvi.video_info
+    play_url    = pvi.play_url
+    sort_index  = pvi.sort_index
+
+    if not video_info:
+        log('video_info does not exists')
+        return
+
+    if pvi.time and pvi.total_time:
+        percent = pvi.time / pvi.total_time * 100
+        log('percent is {}'.format(percent))
+        log('pvi.time is {}'.format(pvi.time))
+
+        if pvi.media_type == 'movie':
+            if pvi.time >= 180 and percent < 90: 
+                save_movie(video_info, play_url, sort_index)
+        elif pvi.media_type == 'tvshow':
+            if percent >= 50:
+                save_tvshow(video_info, play_url, sort_index)
+
+        log("media_type = '{}'".format(pvi.media_type))
 
 def main():
     #Runner(sys.argv[0])
@@ -271,6 +281,8 @@ def main():
 
     if arg_exists('get_info', 1):
         get_info()
+    elif arg_exists('end_playback', 1):
+        end_playback(sys.argv[2])
     elif arg_exists('create_playlists', 1):
         create_playlists()
     elif arg_exists('create_sources', 1):
