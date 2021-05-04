@@ -137,8 +137,9 @@ class MyPlayer(xbmc.Player):
 
         log('\tMyPlayer.file = {}'.format(file))
         log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
+        log('\tMyPlayer.DbId = {}'.format(tag.getDbId()))
 
-        if tag.getOriginalTitle():
+        if tag.getOriginalTitle() or tag.getDbId() > 0:
             log('Keep current info')
             return
 

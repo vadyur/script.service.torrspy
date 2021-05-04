@@ -42,6 +42,11 @@ def get_params(url):
 
 def update_library(path=None):
     import xbmc
+    class MyMonitor(xbmc.Monitor):
+        def onScanFinished(self, library):
+            import vsdbg
+            vsdbg.breakpoint()
+
     if path:    
         xbmc.executebuiltin('UpdateLibrary("video","{}")'.format(path))
     else:
@@ -94,6 +99,8 @@ def save_movie(video_info, play_url, sort_index):
         save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url, sort_index)
         #    nfo = name + '.nfo'
 
+        update_library(make_path_to_base_relative('Movies'))
+
 
 def save_tvshow(video_info, play_url, sort_index):
     original_title = video_info.get('originaltitle')
@@ -106,9 +113,6 @@ def save_tvshow(video_info, play_url, sort_index):
 
         if not save_to_lib:
             return
-
-        import vsdbg
-        vsdbg.breakpoint()
 
         from vdlib.util import filesystem
         tvshow_dirname = u'{} ({})'.format(original_title, year)
@@ -147,6 +151,8 @@ def save_tvshow(video_info, play_url, sort_index):
             play_url = ts_engine.play_url(sort_index)
             #sort_index = get_sort_index(play_url)
             save_strm(filesystem.join(season_path, filename), play_url, sort_index)
+
+        update_library(tvshow_path)
 
 
 def get_info():
