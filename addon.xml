@@ -6,6 +6,7 @@
     <import addon="script.module.torrserver"/>
     <import addon="script.module.requests"/>
     <import addon="script.module.vd-common"/>
+    <import addon="plugin.video.torrserve-next"/>
     <import addon="script.module.vsdbg" optional="true"/>
   </requires>
 
