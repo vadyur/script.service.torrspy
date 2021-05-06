@@ -3,9 +3,8 @@ import sys
 from sys import version_info
 
 from vdlib.util import filesystem
-
 from .torrspy.info import addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
-#from .torrspy.player_video_info import get_sort_index
+from .torrspy.player_video_info import PlayerVideoInfo
 
 if version_info >= (3, 0):
     from urllib.parse import urlparse, parse_qs
@@ -40,17 +39,25 @@ def get_params(url):
     res = urlparse(url)
     return parse_qs(res.query)
 
-def update_library(path=None):
+def update_library(path=None, on_update=None):
     import xbmc
+
     class MyMonitor(xbmc.Monitor):
         def onScanFinished(self, library):
-            import vsdbg
-            vsdbg.breakpoint()
+            if on_update():
+                self.done = True
+    monitor = MyMonitor()
+    monitor.done = False
 
-    if path:    
-        xbmc.executebuiltin('UpdateLibrary("video","{}")'.format(path))
-    else:
-        xbmc.executebuiltin('UpdateLibrary("video")')
+    #if path:
+    #    xbmc.executebuiltin('UpdateLibrary("video","{}")'.format(path), wait=True)
+    #else:
+    xbmc.executebuiltin('UpdateLibrary("video")')
+
+    while not monitor.abortRequested():
+        if monitor.done or monitor.waitForAbort(2):
+            break
+
 
 def save_strm(file_path, play_url, sort_index):
     # action="play_now", magnet=magneturi, selFile=0
@@ -83,7 +90,10 @@ def save_strm(file_path, play_url, sort_index):
     with filesystem.fopen(file_path, 'w') as out:
         out.write(link)
 
-def save_movie(video_info, play_url, sort_index):
+def save_movie(player_video_info):
+    video_info = player_video_info.video_info
+    play_url = player_video_info.play_url
+    sort_index = player_video_info.sort_index
 
     original_title = video_info.get('originaltitle')
     year = video_info.get('year')
@@ -96,13 +106,119 @@ def save_movie(video_info, play_url, sort_index):
 
         name = u'{}({})'.format(original_title, year)
         log('name is {}'.format(name))
-        save_strm(make_path_to_base_relative('Movies/' + name + '.strm'), play_url, sort_index)
+        playing_strm = make_path_to_base_relative('Movies/' + name + '.strm')
+        save_strm(playing_strm, play_url, sort_index)
         #    nfo = name + '.nfo'
 
-        update_library(make_path_to_base_relative('Movies'))
+        def on_update_library():
+            result = get_movies_by('Movies', name + '.strm')
+            movies = result.get('movies')
+            if movies:
+                movie = movies[0]
+                set_movie_resume_playcount(movie['movieid'], player_video_info)
 
+            return True
 
-def save_tvshow(video_info, play_url, sort_index):
+        update_library(make_path_to_base_relative('Movies'), on_update_library)
+
+def get_movies_by(dirname, filename, fields=["file"]):
+    filter = find_file_filter(dirname, filename)
+
+    from vdlib.kodi.jsonrpc_requests import VideoLibrary
+    result = VideoLibrary.GetMovies(filter=filter, properties=fields)    
+    return result
+
+def get_episodes_by(dirname, filename, fields=["file"]):
+    filter = find_file_filter(dirname, filename)
+
+    from vdlib.kodi.jsonrpc_requests import VideoLibrary
+    result = VideoLibrary.GetEpisodes(filter=filter, properties=fields)    
+    return result
+
+def find_file_filter(dirname, filename):
+    filter = {'and': [{
+                    "operator": "contains",
+                    "field": "path",
+                    "value": dirname
+                },
+                {
+                    "operator": "is",
+                    "field": "filename",
+                    "value": filename
+                }                
+            ]}
+    return filter
+
+def get_recent_episodes(fields):
+    import datetime
+    today = datetime.date.today()
+    today.strftime('%Y-%m-%d')
+
+    from vdlib.kodi.jsonrpc_requests import VideoLibrary
+
+    filter = {
+        "operator": "startswith",
+        "field": "dateadded",
+        "value": today.strftime('%Y-%m-%d')
+    }
+    limits = {
+        "start": 0,
+        "end": 100
+    }
+    sort = {
+        "method": "dateadded",
+        "order": "descending"
+    }
+    properties = [
+        "title",
+        "thumbnail",
+        "playcount",
+        "lastplayed",
+        "dateadded",
+        "episode",
+        "season",
+        "rating",
+        "file",
+        "cast",
+        "showtitle",
+        "tvshowid",
+        "uniqueid",
+        "resume",
+        "firstaired",
+        "fanart"
+    ]
+    result = VideoLibrary.GetEpisodes(filter=filter, limits=limits, sort=sort, properties=fields)
+
+def set_movie_resume_playcount(movieid, player_video_info):
+    from vdlib.kodi.jsonrpc_requests import VideoLibrary
+    player_video_info = player_video_info  # type: PlayerVideoInfo
+    percent = player_video_info.time / player_video_info.total_time * 100
+    if player_video_info.time > 180:
+        if percent < 90:
+            resume = {'position': player_video_info.time,
+                         'total': player_video_info.total_time}
+            result = VideoLibrary.SetMovieDetails(movieid=movieid,resume=resume)
+        else:
+            result = VideoLibrary.SetMovieDetails(movieid=movieid,playcount=1)
+    pass
+
+def set_episode_resume_playcount(episodeid, player_video_info):
+    from vdlib.kodi.jsonrpc_requests import VideoLibrary
+
+    player_video_info = player_video_info  # type: PlayerVideoInfo
+    percent = player_video_info.time / player_video_info.total_time * 100
+    if player_video_info.time > 180:
+        if percent < 90:
+            resume = {'position': player_video_info.time,
+                         'total': player_video_info.total_time}
+            result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,resume=resume)
+        else:
+            result = VideoLibrary.SetEpisodeDetails(episodeid=episodeid,playcount=1)
+    pass
+
+def save_tvshow(player_video_info):
+    player_video_info = player_video_info  # type: PlayerVideoInfo
+    video_info = player_video_info.video_info
     original_title = video_info.get('originaltitle')
     year = video_info.get('year')
     imdb = video_info.get('imdbnumber')
@@ -118,7 +234,8 @@ def save_tvshow(video_info, play_url, sort_index):
         tvshow_dirname = u'{} ({})'.format(original_title, year)
         log(tvshow_dirname)
 
-        tvshow_path = make_path_to_base_relative(filesystem.join('TVShows', tvshow_dirname))
+        part_dirname = filesystem.join('TVShows', tvshow_dirname)
+        tvshow_path = make_path_to_base_relative(part_dirname)
         if not filesystem.exists(tvshow_path):
             filesystem.makedirs(tvshow_path)
 
@@ -127,7 +244,7 @@ def save_tvshow(video_info, play_url, sort_index):
 
         from torrserve_stream import Engine
 
-        hash = Engine.extract_hash_from_play_url(play_url)
+        hash = Engine.extract_hash_from_play_url(player_video_info.play_url)
         log(hash)
         ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
 
@@ -138,6 +255,7 @@ def save_tvshow(video_info, play_url, sort_index):
             path = f['path'].split('/')
             info['files'].append({'path': path})
 
+        playing_strm = None
         files = parse_torrent(info)
         for item in files:
             if not api.Episode(item['season'], item['episode']):
@@ -149,10 +267,25 @@ def save_tvshow(video_info, play_url, sort_index):
             filename = '{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, item['season'], item['episode'])
             sort_index = item['index']
             play_url = ts_engine.play_url(sort_index)
-            #sort_index = get_sort_index(play_url)
-            save_strm(filesystem.join(season_path, filename), play_url, sort_index)
+            strm_path = filesystem.join(season_path, filename)
+            save_strm(strm_path, play_url, sort_index)
 
-        update_library(tvshow_path)
+            if play_url == player_video_info.play_url:
+                playing_strm = filename
+
+        def on_update_library():
+            if not playing_strm:
+                return True
+
+            result = get_episodes_by(part_dirname, playing_strm)
+            episodes = result.get('episodes')
+            if episodes:
+                episode = episodes[0]
+                set_episode_resume_playcount(episode['episodeid'], player_video_info)
+
+            return True
+
+        update_library(tvshow_path, on_update_library)
 
 
 def get_info():
@@ -245,8 +378,6 @@ def create_sources():
             executebuiltin('Quit')
 
 def end_playback(player_video_info_str):
-    from .torrspy.player_video_info import PlayerVideoInfo
-
     pvi = PlayerVideoInfo(None)
     pvi.loads(player_video_info_str)
 
@@ -265,10 +396,10 @@ def end_playback(player_video_info_str):
 
         if pvi.media_type == 'movie':
             if pvi.time >= 180 and percent < 90: 
-                save_movie(video_info, play_url, sort_index)
+                save_movie(pvi)
         elif pvi.media_type == 'tvshow':
             if percent >= 50:
-                save_tvshow(video_info, play_url, sort_index)
+                save_tvshow(pvi)
 
         log("media_type = '{}'".format(pvi.media_type))
 
