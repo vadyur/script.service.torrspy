@@ -17,7 +17,8 @@ def addon_setting(id):
 
 def addon_base_path():
     base_path = addon_setting('base_path')
-    return translatePath(base_path)
+    #return translatePath(base_path)
+    return base_path
 
 def make_path_to_base_relative(path):
     return filesystem.join(addon_base_path(), path)

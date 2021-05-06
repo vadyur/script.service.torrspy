@@ -104,7 +104,7 @@ def save_movie(player_video_info):
         if not save_to_lib:
             return
 
-        name = u'{}({})'.format(original_title, year)
+        name = u'{} ({})'.format(original_title, year)
         log('name is {}'.format(name))
         playing_strm = make_path_to_base_relative('Movies/' + name + '.strm')
         save_strm(playing_strm, play_url, sort_index)
@@ -373,7 +373,7 @@ def create_sources():
     restart_msg = u'Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?'
 
     from vdlib.kodi.sources import create_movies_and_tvshows
-    if create_movies_and_tvshows(base_path):
+    if create_movies_and_tvshows(base_path, scrapper='metadata.themoviedb.org.python', scrapper_tv='metadata.tvshows.themoviedb.org.python', suffix=' - TorrSpy'):
         if Dialog().yesno(addon_title(), restart_msg):
             executebuiltin('Quit')
 
