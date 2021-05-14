@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import pickle, base64
 
 def get_sort_index(play_url):

@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sys
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info

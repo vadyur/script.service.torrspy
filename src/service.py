@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import xbmc, xbmcgui, xbmcaddon
 
 from sys import version_info
@@ -54,7 +56,7 @@ class MyPlayer(xbmc.Player):
     def __init__(self):
         from .torrspy.player_video_info import PlayerVideoInfo
         self.video_info = PlayerVideoInfo(self)
-        super().__init__()
+        xbmc.Player.__init__(self)
 
     def getVideoInfo(self):
         tag = self.getVideoInfoTag()
