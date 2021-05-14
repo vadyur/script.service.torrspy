@@ -1,17 +1,23 @@
 <?xml version="1.0" encoding="utf-8" standalone="yes"?>
 <settings>
   <category label="Основные">
+    <setting type="folder" default="special://userdata/addon_data/script.service.torrspy/media" id="base_path"
+        label="Путь сохранения медиатеки"/>
     <setting type="bool" default="true" id="add_movies_to_lib" enable="false"
         label="Добавлять недосмотренные фильмы в медиатеку"/>
     <setting type="bool" default="true" id="add_tvshows_to_lib" enable="false"
         label="Добавлять недосмотренные сериалы в медиатеку"/>
   </category>
   <category label="Действия">
-    <setting type="action" id="create_sources" enable="false"
+    <setting type="action" id="create_sources" enable="true"
         action="RunScript(script.service.torrspy,create_sources)" 
         label="Создать источники для медиатеки"/>
     <setting type="action" id="create_playlists" option="close"
         action="RunScript(script.service.torrspy,create_playlists)" 
         label="Создать плейлисты для каналов Android TV" />
+    <setting type="action" id="install_torrserve_next" enable="!System.HasAddon(plugin.video.torrserve-next)"
+        visible="false"
+        action="InstallAddon(plugin.video.torrserve-next)" 
+        label="Установить `TorrServer Client NEXT!`" />
   </category>
 </settings>

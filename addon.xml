@@ -6,11 +6,12 @@
     <import addon="script.module.torrserver"/>
     <import addon="script.module.requests"/>
     <import addon="script.module.vd-common"/>
+    <import addon="plugin.video.torrserve-next"/>
     <import addon="script.module.vsdbg" optional="true"/>
   </requires>
 
-  <extension point="xbmc.service" library="src/service.py"/>
-  <extension point="xbmc.python.script" library="src/script.py">
+  <extension point="xbmc.service" library="service.py"/>
+  <extension point="xbmc.python.script" library="script.py">
     <provides>executable</provides>
   </extension>
 

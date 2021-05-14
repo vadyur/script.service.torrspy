@@ -15,14 +15,14 @@ cleanstrings = [
    r'(\[.*\])',
 ]
 
-def extract_title_date(filename):
-    title = filename
+def is_video(filename):
     for ext in videoextensions:
         if filename.endswith(ext):
-            title = os.path.splitext(filename)[0]
-            break
-    if filename == title:
-        return None
+            return True
+    return False
+
+def extract_title_date(filename):
+    title = filename
 
     m = re.search(cleandatetime, title)
     title = m.group(1) if m else title
@@ -56,4 +56,36 @@ def test(url):
     r = from_translit(t)
 
     return n, t, d, r
+
+def find_tmdb_movie_item(video_info):
+    from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item
+    tmdb = TMDB_API()
+    original_title = video_info.get('originaltitle')
+    if original_title:
+        results = tmdb.search(original_title)
+        if len(results) == 1:
+            result = results[0]     # type: tmdb_movie_item
+            return result
+
+        filters = [
+            'originaltitle',
+            'plot',
+            'year',
+            'title'
+        ]
+
+        for field in filters:
+            def filter_func(res):
+                info = res.get_info()
+                return info.get(field) == video_info.get(field)
+            if field in video_info:
+                filtered = list(filter(filter_func, results))
+                if len(filtered) == 1:
+                    results = filtered
+                    break
+
+        if len(results):
+            result = results[0] # type: tmdb_movie_item
+            return result
+
 
