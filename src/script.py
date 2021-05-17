@@ -402,6 +402,10 @@ def end_playback(player_video_info_str):
         log('video_info does not exists')
         return
 
+    if video_info.get('dbid', 0) > 0:
+        log('media already in medialibrary')
+        return
+
     if pvi.time and pvi.total_time:
         percent = pvi.time / pvi.total_time * 100
         log('percent is {}'.format(percent))
