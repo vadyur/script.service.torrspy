@@ -1,7 +1,10 @@
+# -*- coding: utf-8 -*-
+
 import json
 
 import xbmc
 import xbmcaddon
+import xbmcgui
 
 from vdlib.kodi.compat import translatePath
 from vdlib.util import filesystem
@@ -19,6 +22,32 @@ def addon_base_path():
     base_path = addon_setting('base_path')
     #return translatePath(base_path)
     return base_path
+
+# спросить|автоматически|нет
+def add_movies_to_lib():
+    s = addon_setting('add_movies_to_lib')
+
+    if s == u'автоматически':
+        return True
+
+    if s == u'нет':
+        return False
+
+    return xbmcgui.Dialog().yesno(addon_title(), 
+            u'Кино не досмотрено. Сохранить его в медиатеку для последующего просмотра?')
+
+def add_tvshows_to_lib():
+    s = addon_setting('add_movies_to_lib')
+
+    if s == u'автоматически':
+        return True
+
+    if s == u'нет':
+        return False
+
+    return xbmcgui.Dialog().yesno(addon_title(), 
+            u'Вы смотрели эпизод сериала. Сохранить сериал в медиатеку для последующего просмотра?')
+
 
 def make_path_to_base_relative(path):
     return filesystem.join(addon_base_path(), path)

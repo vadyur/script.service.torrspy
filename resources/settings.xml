@@ -3,9 +3,9 @@
   <category label="Основные">
     <setting type="folder" default="special://userdata/addon_data/script.service.torrspy/media" id="base_path"
         label="Путь сохранения медиатеки"/>
-    <setting type="bool" default="true" id="add_movies_to_lib" enable="false"
+    <setting type="select" default="спросить" id="add_movies_to_lib" enable="true" values="спросить|автоматически|нет"
         label="Добавлять недосмотренные фильмы в медиатеку"/>
-    <setting type="bool" default="true" id="add_tvshows_to_lib" enable="false"
+    <setting type="select" default="спросить" id="add_tvshows_to_lib" enable="true" values="спросить|автоматически|нет"
         label="Добавлять недосмотренные сериалы в медиатеку"/>
   </category>
   <category label="Действия">
