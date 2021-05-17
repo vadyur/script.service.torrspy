@@ -1,3 +1,5 @@
+# -*- coding: utf-8 -*-
+
 import sys
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
@@ -16,9 +18,16 @@ ts_settings = Settings()
 
 def log(s):
     from .torrspy.info import addon_id
-    message = '[{}: script.py]: {}'.format(addon_id, s)
+    try:
+        message = u'[{}: script.py]: {}'.format(addon_id, s)
+    except UnicodeDecodeError:
+        message = u'[{}: script.py]: {}'.format(addon_id, s.decode('utf-8'))
+
     import xbmc
-    xbmc.log(message)
+    try:
+        xbmc.log(message)
+    except UnicodeEncodeError:
+        xbmc.log(message.encode('utf-8'))
 
 def playing_torrserver_source():
     import xbmc
@@ -91,6 +100,8 @@ def save_strm(file_path, play_url, sort_index):
         out.write(link)
 
 def save_movie(player_video_info):
+    from vdlib.util.string import decode_string
+
     video_info = player_video_info.video_info
     play_url = player_video_info.play_url
     sort_index = player_video_info.sort_index
@@ -104,14 +115,16 @@ def save_movie(player_video_info):
         if not save_to_lib:
             return
 
-        name = u'{} ({})'.format(original_title, year)
-        log('name is {}'.format(name))
-        playing_strm = make_path_to_base_relative('Movies/' + name + '.strm')
+        name = u'{} ({})'.format(
+            decode_string(original_title),
+            year)
+        log(u'name is {}'.format(name))
+        playing_strm = make_path_to_base_relative(u'Movies/' + name + u'.strm')
         save_strm(playing_strm, play_url, sort_index)
         #    nfo = name + '.nfo'
 
         def on_update_library():
-            result = get_movies_by('Movies', name + '.strm')
+            result = get_movies_by(u'Movies', name + '.strm')
             movies = result.get('movies')
             if movies:
                 movie = movies[0]
@@ -387,6 +400,10 @@ def end_playback(player_video_info_str):
 
     if not video_info:
         log('video_info does not exists')
+        return
+
+    if video_info.get('dbid', 0) > 0:
+        log('media already in medialibrary')
         return
 
     if pvi.time and pvi.total_time:
