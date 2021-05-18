@@ -300,6 +300,7 @@ def get_info():
     item.setPath(url)
 
     from torrserve_stream import Engine
+    from .detect import extract_original_title_year
 
     hash = Engine.extract_hash_from_play_url(url)
     engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
@@ -307,6 +308,9 @@ def get_info():
     video_info = engine.get_video_info()
     if video_info:
         log('Get info from TorrServer')
+        if 'imdbnumber' not in video_info:
+            if 'title' in video_info and not 'originaltitle' in video_info:
+                video_info.update(extract_original_title_year(video_info['title']))            
 
     art = engine.get_art()
 
@@ -318,7 +322,11 @@ def get_info():
         from .detect import extract_title_date, extract_filename     # type: ignore
         filename = extract_filename(url)
         title, year = extract_title_date(filename)
-        video_info = {'title': title, 'year': year}
+        video_info = {}
+        if year:
+            video_info['year'] = year
+        if title:
+            video_info['title'] = title
 
     def update_listitem(video_info, art):
         if video_info: item.setInfo('video', video_info)
@@ -334,14 +342,15 @@ def get_info():
     if 'imdbnumber' not in video_info:
         from .detect import find_tmdb_movie_item
         tmdb_movie_item = find_tmdb_movie_item(video_info)
-        imdbnumber = tmdb_movie_item.imdb()
-        video_info.update(tmdb_movie_item.get_info())
-        if imdbnumber:
-            video_info['imdbnumber'] = imdbnumber
-        if tmdb_movie_item.type == 'movie':
-            video_info['mediatype'] = 'movie'
-        elif video_info['mediatype'] == 'tv':
-            video_info['mediatype'] = 'tvshow'
+        if tmdb_movie_item:
+            imdbnumber = tmdb_movie_item.imdb()
+            video_info.update(tmdb_movie_item.get_info())
+            if imdbnumber:
+                video_info['imdbnumber'] = imdbnumber
+            if tmdb_movie_item.type == 'movie':
+                video_info['mediatype'] = 'movie'
+            elif tmdb_movie_item.type == 'tv':
+                video_info['mediatype'] = 'tvshow'
 
         update_listitem(video_info, art)
 
