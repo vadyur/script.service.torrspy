@@ -35,9 +35,46 @@ def extract_title_date(filename):
         if m:
             title = title.replace(m.group(1), '')
 
+    if '[' in title:
+        title = title.split('[')[0]
+
     title = title.replace('.', ' ').strip()
 
     return title, date
+
+def extract_original_title_year(title):
+    source = title
+    year = None
+    original_title = None
+    if '/' in source:
+        parts = source.split('/')
+        title = parts[0]
+
+        original_title = None
+
+        m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9]) /', source)
+        if m:
+            year = m.group(1)
+            parts = source.split(m.group(0))[0]
+            parts = parts.split('/')
+            original_title = parts[-1]
+        else:
+            for part in reversed(parts[1:]):
+                m = re.search(r'(19[0-9][0-9]|20[0-9][0-9])', part.strip())
+                if m:
+                    original_title, year = extract_title_date(part)
+                    if original_title and year:
+                        break
+                    year = m.group(1)
+
+    video_info = {'title': title.strip()}
+    if original_title:
+        if not year:
+            original_title, year = extract_title_date(original_title.strip())
+        video_info['originaltitle'] = original_title.strip()
+    if year:
+        video_info['year'] = year
+    return video_info
 
 def extract_filename(url):
     import re
@@ -90,4 +127,45 @@ def find_tmdb_movie_item(video_info):
             result = results[0] # type: tmdb_movie_item
             return result
 
+if __name__ == '__main__':
+    from unittest import TestCase, main
 
+    class TestDetect(TestCase):
+        def test_01(self):
+            s = u'Невероятные / The Nevers [S01] (2021) WEBRip 1080p от Kerob | L2 | The.Nevers.S01.1080p.Kerob'
+            r = extract_original_title_year(s)
+            self.assertEqual(r['title'], u'Невероятные')
+            self.assertEqual(r['originaltitle'], u'The Nevers')
+            self.assertEqual(r['year'], u'2021')
+
+        def test_02(self):
+            s = u'Полный нокдаун / American Fighter / 2019 / ДБ / BDRip (1080p) | American.Fighter.2019.BDRip.1080p.seleZen.mkv'
+            r = extract_original_title_year(s)
+            self.assertEqual(r['title'], u'Полный нокдаун')
+            self.assertEqual(r['originaltitle'], u'American Fighter')
+            self.assertEqual(r['year'], u'2019')
+
+        def test_03(self):
+            s = u'Берег москитов / The Mosquito Coast [01x01-04 из 07] (2021) WEB-DL 1080p | AlexFilm | The_Mosquito_Coast_(s01)_AlexFilm_1080p'
+            r = extract_original_title_year(s)
+            self.assertEqual(r['title'], u'Берег москитов')
+            self.assertEqual(r['originaltitle'], u'The Mosquito Coast')
+            self.assertEqual(r['year'], u'2021')
+
+        def test_04(self):
+            s = u'Мастер меча / Мечник / Geomgaek / The Swordsman (2020) HDRip-AVC от MediaBit | iTunes'
+            r = extract_original_title_year(s)
+            self.assertEqual(r['title'], u'Мастер меча')
+            self.assertEqual(r['originaltitle'], u'The Swordsman')
+            self.assertEqual(r['year'], u'2020')
+
+        '''
+        def test_(self):
+            s = u''
+            r = extract_original_title_year(s)
+            self.assertEqual(r['title'], u'')
+            self.assertEqual(r['originaltitle'], u'')
+            self.assertEqual(r['year'], u'')
+        '''
+
+    main()
