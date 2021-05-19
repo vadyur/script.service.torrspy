@@ -17,9 +17,10 @@
 
   <extension point="xbmc.addon.metadata">
     <platform>all</platform>
-    <summary lang="ru">TorrSpy</summary>
-    <description lang="ru">TorrSpy</description>
-    
+    <summary lang="ru">Сервис TorrSpy</summary>
+    <description lang="ru">Плагин предназначен для получения и отображении метаинформации о проигрываемом фильме/сериале запущенном в Kodi извне через TorrServer. Также данный аддон позволяет сохранить недосмотренный фильм/сериал в медиатеку Kodi.</description>
+    <forum>http://xbmc.ru/forum/showthread.php?t=23669</forum>
+    <source>https://github.com/vadyur/script.service.torrspy</source>
     <assets>
         <icon>resources/icon.png</icon>
     </assets>
