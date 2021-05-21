@@ -77,11 +77,8 @@ def extract_original_title_year(title):
     return video_info
 
 def extract_filename(url):
-    import re
-    pattern = r'/stream/(.+)\?link='
-    m = re.search(pattern, url)
-    if m:
-        return m.group(1)
+    from torrserve_stream.engine import Engine
+    return Engine.extract_filename_from_play_url(url)
 
 def from_translit(text):
     from transliterate import translit, detect_language
