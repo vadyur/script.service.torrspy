@@ -96,24 +96,30 @@ def test(url):
 def find_tmdb_movie_item(video_info):
     from vdlib.scrappers.movieapi import TMDB_API, tmdb_movie_item
     tmdb = TMDB_API()
-    original_title = video_info.get('originaltitle')
-    if original_title:
-        results = tmdb.search(original_title)
+
+    def find_by(title):
+        results = tmdb.search(title)
         if len(results) == 1:
             result = results[0]     # type: tmdb_movie_item
             return result
 
-        filters = [
-            'originaltitle',
-            'plot',
-            'year',
-            'title'
-        ]
+        def str_func(tmdb, loc):
+            return tmdb == loc
+
+        def date_func(tmdb, loc):
+            return str(tmdb) == str(loc)
+
+        filters = {
+            'originaltitle': str_func,
+            'plot': str_func,
+            'year': date_func,
+            'title': str_func
+        }
 
         for field in filters:
             def filter_func(res):
-                info = res.get_info()
-                return info.get(field) == video_info.get(field)
+                tmdb_info = res.get_info()
+                return filters[field](tmdb_info.get(field), video_info.get(field))
             if field in video_info:
                 filtered = list(filter(filter_func, results))
                 if len(filtered) == 1:
@@ -122,10 +128,38 @@ def find_tmdb_movie_item(video_info):
 
         if len(results):
             result = results[0] # type: tmdb_movie_item
-            return result
+
+    for field in ['originaltitle', 'title']:
+        title = video_info.get(field)
+        if title:
+            result = find_by(title)
+            if result:
+                return result
 
 if __name__ == '__main__':
     from unittest import TestCase, main
+
+    def append_module_path(module, sub_paths):
+        # type: (str, list) -> None
+        import sys
+        from os.path import join, dirname, normpath
+
+        module_path = normpath(join(dirname(__file__), '..', '..', module))
+        for path in sub_paths:
+            sub_path = join(module_path, path)
+            sys.path.append(sub_path)
+
+    append_module_path('script.module.torrserver', ['lib'])
+    append_module_path('script.module.vd-common', ['lib'])
+
+    class TestTMDB(TestCase):
+        def test_01(self):
+            video_info = {
+                'title': u'Tom and Jerry',
+                'year': u'2021'
+            }
+            mi = find_tmdb_movie_item(video_info)
+            pass
 
     class TestDetect(TestCase):
         def test_01(self):
@@ -155,6 +189,14 @@ if __name__ == '__main__':
             self.assertEqual(r['title'], u'Мастер меча')
             self.assertEqual(r['originaltitle'], u'The Swordsman')
             self.assertEqual(r['year'], u'2020')
+
+        def test_05(self):
+            u = u'http://127.0.0.1:8090/stream/Tom.and.Jerry.2021.BDRip.1080p.seleZen.mkv?link=4bb050efb78bfcd2fcaa515e05ad1338918e6765&index=1&play'
+            n = extract_filename(u)
+            t, y = extract_title_date(n)
+            self.assertEqual(t, u'Tom and Jerry')
+            self.assertEqual(y, u'2021')
+            #self.assertEqual(r['year'], u'')
 
         '''
         def test_(self):
