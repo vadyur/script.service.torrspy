@@ -30,6 +30,7 @@ def log(s):
         xbmc.log(message.encode('utf-8'))
 
 def playing_torrserver_source():
+    # type: () -> bool
     import xbmc
     player = xbmc.Player()
 
@@ -100,6 +101,7 @@ def save_strm(file_path, play_url, sort_index):
         out.write(link)
 
 def save_movie(player_video_info):
+    # type: (PlayerVideoInfo) -> None
     from vdlib.util.string import decode_string
 
     video_info = player_video_info.video_info
@@ -198,8 +200,8 @@ def get_recent_episodes(fields):
     result = VideoLibrary.GetEpisodes(filter=filter, limits=limits, sort=sort, properties=fields)
 
 def set_movie_resume_playcount(movieid, player_video_info):
+    # type: (int, PlayerVideoInfo) -> None
     from vdlib.kodi.jsonrpc_requests import VideoLibrary
-    player_video_info = player_video_info  # type: PlayerVideoInfo
     percent = player_video_info.time / player_video_info.total_time * 100
     if player_video_info.time > 180:
         if percent < 90:
@@ -211,6 +213,7 @@ def set_movie_resume_playcount(movieid, player_video_info):
     pass
 
 def set_episode_resume_playcount(episodeid, player_video_info):
+    # type: (int, PlayerVideoInfo) -> None
     from vdlib.kodi.jsonrpc_requests import VideoLibrary
 
     player_video_info = player_video_info  # type: PlayerVideoInfo
@@ -225,7 +228,7 @@ def set_episode_resume_playcount(episodeid, player_video_info):
     pass
 
 def save_tvshow(player_video_info):
-    player_video_info = player_video_info  # type: PlayerVideoInfo
+    # type: (PlayerVideoInfo) -> None
     video_info = player_video_info.video_info
     original_title = video_info.get('originaltitle')
     year = video_info.get('year')
