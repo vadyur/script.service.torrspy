@@ -15,7 +15,8 @@ def get_sort_index(play_url):
 
 class PlayerVideoInfo(object):
     def __init__(self, player):
-        self.player = player        # type: MyPlayer
+        import xbmc
+        self.player = player        # type: xbmc.Player
         self.reset()
 
     def update(self):
