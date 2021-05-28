@@ -128,6 +128,7 @@ def find_tmdb_movie_item(video_info):
 
         if len(results):
             result = results[0] # type: tmdb_movie_item
+            return result
 
     for field in ['originaltitle', 'title']:
         title = video_info.get(field)
