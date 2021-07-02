@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import re, os
+import re
 
 videoextensions = [
     '.m4v', '.3g2', '.3gp', '.nsv', '.tp', '.ts', '.ty', '.strm', '.pls', '.rm', '.rmvb', '.mpd', '.m3u', '.m3u8', '.ifo', '.mov', '.qt', '.divx', '.xvid',
@@ -18,12 +18,19 @@ cleanstrings = [
 ]
 
 def is_video(filename):
+    # type: (str) -> bool
     for ext in videoextensions:
         if filename.endswith(ext):
             return True
     return False
 
+def is_episode(filename):
+    # type: (str) -> bool
+    pattern = r'[s|S]\d+[e|E]\d+'
+    return True if re.search(pattern, filename) else False
+
 def extract_title_date(filename):
+    # type: (str) -> tuple
     title = filename
 
     m = re.search(cleandatetime, title)

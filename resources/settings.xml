@@ -7,6 +7,8 @@
         label="Добавлять недосмотренные фильмы в медиатеку"/>
     <setting type="select" default="спросить" id="add_tvshows_to_lib" enable="true" values="спросить|автоматически|нет"
         label="Добавлять недосмотренные сериалы в медиатеку"/>
+    <setting type="bool" default="false" id="add_all_from_torserver" enable="true"
+        label="Добавлять все раздачи из базы TorrServer в медиатеку"/>
   </category>
   <category label="Действия">
     <setting type="action" id="create_sources" enable="true"
