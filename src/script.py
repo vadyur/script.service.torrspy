@@ -5,6 +5,9 @@ import sys, json
 from sys import version_info
 from time import sleep, time
 
+HOURS = 3600
+DAYS = HOURS * 24
+
 import requests
 
 from vdlib.util import filesystem
@@ -453,6 +456,9 @@ def end_playback(player_video_info_str):
 
         log("media_type = '{}'".format(pvi.media_type))
 
+def get_hash(item):
+    return item.get('Hash', item['hash'])
+
 class ProcessedItems(object):
     def __init__(self):
         self.items = []
@@ -470,19 +476,29 @@ class ProcessedItems(object):
             json.dump(self.items, f)
 
     def is_processed(self, list_item):
+        # type: (dict) -> bool
         for item in self.items:
-            if item.get('Hash', item['hash']) == list_item['Hash']:
+            if get_hash(item) == get_hash(list_item):
+                if 'next_attempt' in item:
+                    return time() < item.get('next_attempt')
                 return True
         return False
 
-    def set_processed(self, list_item):
+    def set_processed(self, list_item, timeout=None):
+        # type: (dict, float) -> bool
         data = list_item.v2 if hasattr(list_item, 'v2') else list_item
+        if timeout:
+            data['next_attempt'] = time() + timeout
+
+        self.items = [ item for item in self.items if get_hash(item) != get_hash(list_item) ]
         self.items.append(data)
+        return timeout==None
+
 
 def try_append_torrent_to_media_library(list_item, engine, processed_items):
-    # type: (dict, Engine, ProcessedItems) -> None
+    # type: (dict, Engine, ProcessedItems) -> bool
     if processed_items.is_processed(list_item):
-        return
+        return False
 
     hash = list_item['Hash']
     engine.hash = hash
@@ -499,7 +515,8 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         sleep(1)
 
     if 'Files' not in ts:
-        return
+        return processed_items.set_processed(list_item, 1 * HOURS)
+        
 
     data = list_item.get('data', list_item.get('Info'))
     if data:
@@ -508,7 +525,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         title = list_item.get('title')
         video_info = { 'title': title } if title else None
         if not video_info:
-            return
+            return processed_items.set_processed(list_item, 1 * DAYS)
         update_video_info(video_info)
 
     if not video_info:
@@ -517,9 +534,8 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
     needed_fields = set(['imdbnumber', 'mediatype', 'originaltitle'])
     if needed_fields & video_info.keys() != needed_fields:
         update_video_info_from_tmdb(video_info)
-
-    if needed_fields & video_info.keys() != needed_fields:
-        return
+        if needed_fields & video_info.keys() != needed_fields:
+            return processed_items.set_processed(list_item, 1 * DAYS)
 
     save_video_info(hash, video_info)
 
@@ -533,7 +549,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
                 if play_file:
                     _, year = extract_title_date(play_file['path'])
                     if year and str(year) != str(video_info['year']):
-                        return
+                        return processed_items.set_processed(list_item, 1 * DAYS)                        
 
                     sort_index = play_file['file_id']
                     play_url = engine.play_url(sort_index, ts)
@@ -541,7 +557,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
                                     sort_index, 
                                     original_title=video_info['originaltitle'], 
                                     year=video_info['year'])
-                    processed_items.set_processed(list_item)
+                    return processed_items.set_processed(list_item)
             elif video_info['mediatype'] == 'tvshow':
                 save_tvshow_strms(video_info.get('title'),
                                 video_info.get('originaltitle'),
@@ -549,27 +565,29 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
                                 video_info.get('imdbnumber'),
                                 engine,
                                 ts_stat=ts)
-                processed_items.set_processed(list_item)
+                return processed_items.set_processed(list_item)
 
-            return
-        except BaseException as e:
+            return False
+        except requests.exceptions.ConnectionError as e:
             pass
 
         print('Attempt #{}'.format(n+1+1))
         sleep(5)
 
-    pass
-
 def add_all_from_ts():
-    import requests, time
     from .torrspy.info import add_all_from_torserver
     if add_all_from_torserver():
         processed_items = ProcessedItems()
         processed_items.load()
         engine = Engine(host=ts_settings.host, port=ts_settings.port)
+        need_update = False
         for list_item in engine.list():
-            try_append_torrent_to_media_library(list_item, engine, processed_items)
+            need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items)
         processed_items.save()
+
+        if need_update:
+            from xbmc import executebuiltin
+            executebuiltin('UpdateLibrary("video")')
 
 def main():
     #Runner(sys.argv[0])
