@@ -60,6 +60,12 @@ def validate_part(part):
 
     return True
 
+def clean_part(part):
+    part = re.sub(r'\[.+?\]', '', part)
+    #part = re.sub(r'\(.+?\)', part)
+    return part.strip()
+
+
 def extract_original_title_year(title):
     source = title
     year = None
@@ -68,6 +74,7 @@ def extract_original_title_year(title):
         parts = source.split('/')
         title = parts[0]
 
+        parts = [ clean_part(part) for part in parts ]
         parts = list(filter(validate_part, parts))
 
         original_title = None
