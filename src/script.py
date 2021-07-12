@@ -5,13 +5,14 @@ import sys, json
 from sys import version_info
 from time import sleep, time
 
+MINUTES = 60
 HOURS = 3600
 DAYS = HOURS * 24
 
 import requests
 
 from vdlib.util import filesystem
-from .torrspy.info import addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
+from .torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
 from .torrspy.player_video_info import PlayerVideoInfo
 
 from .detect import is_episode, is_video, extract_filename, extract_title_date, extract_original_title_year, find_tmdb_movie_item
@@ -293,11 +294,10 @@ def save_tvshow(player_video_info):
     if original_title and year:
         from .torrspy.info import add_tvshows_to_lib
         if add_tvshows_to_lib():
-            playing_strm = None
+            save_tvshow.playing_strm = None
             def episode_func(filename, play_url):
-                global playing_strm
                 if play_url == player_video_info.play_url:
-                    playing_strm = filename
+                    save_tvshow.playing_strm = filename
                 log(hash)
         
             ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
@@ -307,10 +307,10 @@ def save_tvshow(player_video_info):
             tvshow_path = make_path_to_base_relative(part_dirname)
 
             def on_update_library():
-                if not playing_strm:
+                if not save_tvshow.playing_strm:
                     return True
 
-                result = get_episodes_by(part_dirname, playing_strm)
+                result = get_episodes_by(part_dirname, save_tvshow.playing_strm)
                 episodes = result.get('episodes')
                 if episodes:
                     episode = episodes[0]
@@ -451,13 +451,34 @@ def end_playback(player_video_info_str):
             if pvi.time >= 180 and percent < 90: 
                 save_movie(pvi)
         elif pvi.media_type == 'tvshow':
-            if percent >= 50:
+            if pvi.time >= 180:
+                #import vsdbg
+                #vsdbg.breakpoint()
                 save_tvshow(pvi)
 
         log("media_type = '{}'".format(pvi.media_type))
 
 def get_hash(item):
     return item.get('Hash', item['hash'])
+
+def get_mem_setting(key):
+    try:
+        import xbmcgui
+        window = xbmcgui.Window(10000)
+        value = window.getProperty(key)
+        log('{} is {}'.format(key, value))
+        return value
+    except AttributeError:
+        return addon_setting(key)
+
+def set_mem_setting(key, value):
+    try:
+        import xbmcgui
+        window = xbmcgui.Window(10000)
+        window.setProperty(key, value)
+        #log('{} set to {}'.format(key, value))
+    except AttributeError:
+        addon_set_setting(key, value)
 
 class ProcessedItems(object):
     def __init__(self):
@@ -471,12 +492,27 @@ class ProcessedItems(object):
         except FileNotFoundError:
             pass
 
+        self.time_touch()
+
     def save(self):
         with filesystem.fopen(self.path, 'w') as f:
             json.dump(self.items, f)
+        self.time_touch()
+
+    def time_touch(self):
+        set_mem_setting('torrspy_processed_time', str(time()))
+
+    def is_time_expired(self):
+        t = get_mem_setting('torrspy_processed_time')
+        try:
+            t = float(t)
+            return time() > t + 1 * MINUTES
+        except ValueError:
+            return True
 
     def is_processed(self, list_item):
         # type: (dict) -> bool
+        self.time_touch()
         for item in self.items:
             if get_hash(item) == get_hash(list_item):
                 if 'next_attempt' in item:
@@ -492,6 +528,7 @@ class ProcessedItems(object):
 
         self.items = [ item for item in self.items if get_hash(item) != get_hash(list_item) ]
         self.items.append(data)
+        self.time_touch()
         return timeout==None
 
 
@@ -503,20 +540,21 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
     hash = list_item['Hash']
     engine.hash = hash
 
+    log('Getting files list')
     for n in range(20):
         try:
-            if n:
-                print('#', n+1)
             ts = engine.torrent_stat()
             if 'Files' in ts:
+                log("Files list exists")
                 break
         except requests.exceptions.ConnectionError:
             pass
         sleep(1)
+        processed_items.time_touch()
 
     if 'Files' not in ts:
+        log("Files list does't exists!!!")
         return processed_items.set_processed(list_item, 1 * HOURS)
-        
 
     data = list_item.get('data', list_item.get('Info'))
     if data:
@@ -574,20 +612,31 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         print('Attempt #{}'.format(n+1+1))
         sleep(5)
 
-def add_all_from_ts():
+def schedule_add_all_from_torserver():
     from .torrspy.info import add_all_from_torserver
     if add_all_from_torserver():
         processed_items = ProcessedItems()
-        processed_items.load()
-        engine = Engine(host=ts_settings.host, port=ts_settings.port)
-        need_update = False
-        for list_item in engine.list():
-            need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items)
-        processed_items.save()
 
-        if need_update:
-            from xbmc import executebuiltin
-            executebuiltin('UpdateLibrary("video")')
+        if not processed_items.is_time_expired():
+            log('schedule_add_all_from_torserver: skipped by time')
+            return
+
+        processed_items.time_touch()
+        log('schedule_add_all_from_torserver: processing...')
+        add_all_from_ts(processed_items)
+        log('schedule_add_all_from_torserver: processed')
+
+def add_all_from_ts(processed_items):
+    processed_items.load()
+    engine = Engine(host=ts_settings.host, port=ts_settings.port)
+    need_update = False
+    for list_item in engine.list():
+        need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items)
+    processed_items.save()
+
+    if need_update:
+        from xbmc import executebuiltin
+        executebuiltin('UpdateLibrary("video")')
 
 def main():
     #Runner(sys.argv[0])
@@ -610,7 +659,7 @@ def main():
         create_playlists()
     elif arg_exists('create_sources', 1):
         create_sources()
-    elif arg_exists('add_all_from_ts', 1):
-        add_all_from_ts()
+    elif arg_exists('schedule_add_all_from_torserver', 1):
+        schedule_add_all_from_torserver()
     else:
         open_settings()
