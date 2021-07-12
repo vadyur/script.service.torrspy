@@ -49,6 +49,17 @@ def extract_title_date(filename):
 
     return title, date
 
+def validate_part(part):
+    keys =  [u'Сезон', u'Серии', u'сезон', u'серии']
+    for key in keys:
+        if key in part:
+            return False
+
+    if re.search(u'\\d из \\d', part):
+        return False
+
+    return True
+
 def extract_original_title_year(title):
     source = title
     year = None
@@ -56,6 +67,8 @@ def extract_original_title_year(title):
     if '/' in source:
         parts = source.split('/')
         title = parts[0]
+
+        parts = list(filter(validate_part, parts))
 
         original_title = None
 
