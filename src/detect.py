@@ -77,7 +77,7 @@ def extract_original_title_year(title):
         parts = [ clean_part(part) for part in parts ]
         parts = list(filter(validate_part, parts))
 
-        original_title = None
+        original_title = parts[1] if len(parts) == 2 else None
 
         m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9]) /', source)
         if m:
