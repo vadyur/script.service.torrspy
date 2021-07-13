@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import re, os
+import re
 
 videoextensions = [
     '.m4v', '.3g2', '.3gp', '.nsv', '.tp', '.ts', '.ty', '.strm', '.pls', '.rm', '.rmvb', '.mpd', '.m3u', '.m3u8', '.ifo', '.mov', '.qt', '.divx', '.xvid',
@@ -18,12 +18,19 @@ cleanstrings = [
 ]
 
 def is_video(filename):
+    # type: (str) -> bool
     for ext in videoextensions:
         if filename.endswith(ext):
             return True
     return False
 
+def is_episode(filename):
+    # type: (str) -> bool
+    pattern = r'[s|S]\d+[e|E]\d+'
+    return True if re.search(pattern, filename) else False
+
 def extract_title_date(filename):
+    # type: (str) -> tuple
     title = filename
 
     m = re.search(cleandatetime, title)
@@ -42,6 +49,23 @@ def extract_title_date(filename):
 
     return title, date
 
+def validate_part(part):
+    keys =  [u'Сезон', u'Серии', u'сезон', u'серии']
+    for key in keys:
+        if key in part:
+            return False
+
+    if re.search(u'\\d из \\d', part):
+        return False
+
+    return True
+
+def clean_part(part):
+    part = re.sub(r'\[.+?\]', '', part)
+    #part = re.sub(r'\(.+?\)', part)
+    return part.strip()
+
+
 def extract_original_title_year(title):
     source = title
     year = None
@@ -49,6 +73,9 @@ def extract_original_title_year(title):
     if '/' in source:
         parts = source.split('/')
         title = parts[0]
+
+        parts = [ clean_part(part) for part in parts ]
+        parts = list(filter(validate_part, parts))
 
         original_title = None
 
@@ -137,75 +164,3 @@ def find_tmdb_movie_item(video_info):
             if result:
                 return result
 
-if __name__ == '__main__':
-    from unittest import TestCase, main
-
-    def append_module_path(module, sub_paths):
-        # type: (str, list) -> None
-        import sys
-        from os.path import join, dirname, normpath
-
-        module_path = normpath(join(dirname(__file__), '..', '..', module))
-        for path in sub_paths:
-            sub_path = join(module_path, path)
-            sys.path.append(sub_path)
-
-    append_module_path('script.module.torrserver', ['lib'])
-    append_module_path('script.module.vd-common', ['lib'])
-
-    class TestTMDB(TestCase):
-        def test_01(self):
-            video_info = {
-                'title': u'Tom and Jerry',
-                'year': u'2021'
-            }
-            mi = find_tmdb_movie_item(video_info)
-            pass
-
-    class TestDetect(TestCase):
-        def test_01(self):
-            s = u'Невероятные / The Nevers [S01] (2021) WEBRip 1080p от Kerob | L2 | The.Nevers.S01.1080p.Kerob'
-            r = extract_original_title_year(s)
-            self.assertEqual(r['title'], u'Невероятные')
-            self.assertEqual(r['originaltitle'], u'The Nevers')
-            self.assertEqual(r['year'], u'2021')
-
-        def test_02(self):
-            s = u'Полный нокдаун / American Fighter / 2019 / ДБ / BDRip (1080p) | American.Fighter.2019.BDRip.1080p.seleZen.mkv'
-            r = extract_original_title_year(s)
-            self.assertEqual(r['title'], u'Полный нокдаун')
-            self.assertEqual(r['originaltitle'], u'American Fighter')
-            self.assertEqual(r['year'], u'2019')
-
-        def test_03(self):
-            s = u'Берег москитов / The Mosquito Coast [01x01-04 из 07] (2021) WEB-DL 1080p | AlexFilm | The_Mosquito_Coast_(s01)_AlexFilm_1080p'
-            r = extract_original_title_year(s)
-            self.assertEqual(r['title'], u'Берег москитов')
-            self.assertEqual(r['originaltitle'], u'The Mosquito Coast')
-            self.assertEqual(r['year'], u'2021')
-
-        def test_04(self):
-            s = u'Мастер меча / Мечник / Geomgaek / The Swordsman (2020) HDRip-AVC от MediaBit | iTunes'
-            r = extract_original_title_year(s)
-            self.assertEqual(r['title'], u'Мастер меча')
-            self.assertEqual(r['originaltitle'], u'The Swordsman')
-            self.assertEqual(r['year'], u'2020')
-
-        def test_05(self):
-            u = u'http://127.0.0.1:8090/stream/Tom.and.Jerry.2021.BDRip.1080p.seleZen.mkv?link=4bb050efb78bfcd2fcaa515e05ad1338918e6765&index=1&play'
-            n = extract_filename(u)
-            t, y = extract_title_date(n)
-            self.assertEqual(t, u'Tom and Jerry')
-            self.assertEqual(y, u'2021')
-            #self.assertEqual(r['year'], u'')
-
-        '''
-        def test_(self):
-            s = u''
-            r = extract_original_title_year(s)
-            self.assertEqual(r['title'], u'')
-            self.assertEqual(r['originaltitle'], u'')
-            self.assertEqual(r['year'], u'')
-        '''
-
-    main()

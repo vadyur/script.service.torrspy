@@ -18,9 +18,17 @@ def addon_title():
 def addon_setting(id):
     return addon.getSetting(id)
 
+def addon_set_setting(id, value):
+    log('{} set to {}'.format(id, value))    
+    addon.setSetting(id, value)
+
 def addon_base_path():
     base_path = addon_setting('base_path')
     return base_path
+
+def add_all_from_torserver():
+    # type: () -> bool
+    return addon_setting('add_all_from_torserver') == 'true'
 
 # спросить|автоматически|нет
 def add_movies_to_lib():

@@ -3,6 +3,7 @@
 import xbmc, xbmcgui, xbmcaddon
 
 from sys import version_info
+from time import time
 
 if version_info >= (3, 0, 0):
     from urllib.parse import quote_plus
@@ -176,15 +177,22 @@ class MyPlayer(xbmc.Player):
 
     def end_playback(self):
         RunScript('end_playback', self.video_info.dumps())
-        self.video_info.reset()            
+        self.video_info.reset()
 
 def main():
     monitor = MyMonitor()
     player = MyPlayer()
 
+    schedule_add_all_from_torserver_last_run = time()
+
     while not monitor.abortRequested():
         if monitor.waitForAbort(2):
             break
+
+        now = time()
+        if now > schedule_add_all_from_torserver_last_run + 30:
+            RunScript('schedule_add_all_from_torserver')
+            schedule_add_all_from_torserver_last_run = now
 
         if not player.isPlaying():
             continue
