@@ -486,12 +486,14 @@ class ProcessedItems(object):
         self.path = make_path_to_base_relative('.data/processed_items.json')
 
     def load(self):
+        import errno
         try:
             with filesystem.fopen(self.path, 'r') as f:
                 self.items = json.load(f)
-        except FileNotFoundError:
-            pass
-
+        #except FileNotFoundError:
+        except EnvironmentError as e:
+            if e.errno != errno.ENOENT:
+                raise
         self.time_touch()
 
     def save(self):
@@ -570,9 +572,11 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         video_info = load_video_info(hash)
 
     needed_fields = set(['imdbnumber', 'mediatype', 'originaltitle'])
-    if needed_fields & video_info.keys() != needed_fields:
+    def keys():
+        return video_info.keys() if version_info >= (3, 0) else video_info.viewkeys()
+    if needed_fields & keys() != needed_fields:
         update_video_info_from_tmdb(video_info)
-        if needed_fields & video_info.keys() != needed_fields:
+        if needed_fields & keys() != needed_fields:
             return processed_items.set_processed(list_item, 1 * DAYS)
 
     save_video_info(hash, video_info)
