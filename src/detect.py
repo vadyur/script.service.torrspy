@@ -34,6 +34,9 @@ def extract_title_date(filename):
     title = filename
 
     m = re.search(cleandatetime, title)
+    if m is None:
+        return title, None
+
     title = m.group(1) if m else title
     date = m.group(2) if m else None
 
@@ -41,6 +44,10 @@ def extract_title_date(filename):
         m = re.search(clinning_re, title)
         if m:
             title = title.replace(m.group(1), '')
+
+    for date_part in [ '['+date+']', '('+date+')' ]:
+        if date_part in title:
+            title = title.split(date_part)[0]
 
     if '[' in title:
         title = title.split('[')[0]
