@@ -300,7 +300,7 @@ def save_tvshow(player_video_info):
                     save_tvshow.playing_strm = filename
                 log(hash)
         
-            ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
+            ts_engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
             save_tvshow_strms(video_info.get('title'), original_title, year, imdb, ts_engine, episode_func=episode_func)
 
             part_dirname = filesystem.join('TVShows', get_tvshow_dirname(original_title, year))
@@ -330,7 +330,7 @@ def get_info():
     item.setPath(url)
 
     hash = Engine.extract_hash_from_play_url(url)
-    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port)
+    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
 
     video_info = get_video_info_from_engine(engine)            
 
@@ -632,7 +632,7 @@ def schedule_add_all_from_torserver():
 
 def add_all_from_ts(processed_items):
     processed_items.load()
-    engine = Engine(host=ts_settings.host, port=ts_settings.port)
+    engine = Engine(host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
     need_update = False
     for list_item in engine.list():
         need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items)
