@@ -86,8 +86,8 @@ def save_strm(file_path, play_url, sort_index):
 
     file_path = makeLegalFilename(file_path)
 
-    log('def save_strm(file_path, play_url)')
-    log('file_path is "{}"'.format(file_path))
+    log(u'def save_strm(file_path, play_url)')
+    log(u'file_path is "{}"'.format(file_path))
 
     base_path = addon_base_path()
     strm_path = filesystem.relpath(file_path, base_path)
@@ -268,10 +268,10 @@ def save_tvshow_strms(title, original_title, year, imdb, ts_engine, episode_func
         if not api.Episode(item['season'], item['episode']):
             continue
 
-        season_path = filesystem.join(tvshow_path, 'Season {}'.format(item['season']))
+        season_path = filesystem.join(tvshow_path, u'Season {}'.format(item['season']))
         if not filesystem.exists(season_path):
             filesystem.makedirs(season_path)
-        filename = '{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, item['season'], item['episode'])
+        filename = u'{} ({}) S{:02d}E{:02d}.strm'.format(original_title, year, item['season'], item['episode'])
         sort_index = item['index']
         play_url = ts_engine.play_url(sort_index, torrent_stat=ts_stat)
         strm_path = filesystem.join(season_path, filename)
@@ -466,7 +466,7 @@ def get_mem_setting(key):
         import xbmcgui
         window = xbmcgui.Window(10000)
         value = window.getProperty(key)
-        log('{} is {}'.format(key, value))
+        log(u'{} is {}'.format(key, value))
         return value
     except AttributeError:
         return addon_setting(key)
