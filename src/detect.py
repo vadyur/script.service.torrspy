@@ -73,11 +73,21 @@ def clean_part(part):
     #part = re.sub(r'\(.+?\)', part)
     return part.strip()
 
+def _extract_KT_title_year(title):
+    pattern = r'\[KT\] (.+) \((19[0-9][0-9]|20[0-9][0-9])\)'
+    m = re.match(pattern, title)
+    if m:
+        return { 'title': m.group(1), 'year': m.group(2) }
 
 def extract_original_title_year(title):
     source = title
     year = None
     original_title = None
+
+    video_info = _extract_KT_title_year(title)
+    if video_info:
+        return video_info
+
     if '/' in source:
         parts = source.split('/')
         title = parts[0]
