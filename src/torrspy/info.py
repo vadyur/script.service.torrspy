@@ -44,7 +44,7 @@ def add_movies_to_lib():
             u'Кино не досмотрено. Сохранить его в медиатеку для последующего просмотра?')
 
 def add_tvshows_to_lib():
-    s = decode_string(addon_setting('add_movies_to_lib'))
+    s = decode_string(addon_setting('add_tvshows_to_lib'))
 
     if s == u'автоматически':
         return True
