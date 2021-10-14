@@ -112,6 +112,11 @@ def extract_original_title_year(title):
                         break
                     year = m.group(1)
 
+    if not year:
+        m = re.search(r'(19[0-9][0-9]|20[0-9][0-9])', source)
+        if m:
+            year = m.group(1)
+
     video_info = {'title': title.strip()}
     if original_title:
         if not year:
