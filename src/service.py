@@ -180,8 +180,17 @@ class MyPlayer(xbmc.Player):
         self.video_info.reset()
 
 def main():
+
+    log('--- Start TorrSpy service ---')
+
+    is_player_already_playing = playing_torrserver_source()
+
     monitor = MyMonitor()
     player = MyPlayer()
+
+    if is_player_already_playing:
+        log('Player is already playing TorrServer stream')
+        player.onAVStarted()
 
     schedule_add_all_from_torserver_last_run = time()
 
