@@ -1,9 +1,10 @@
 # -*- coding: utf-8 -*-
 
-import sys, json
+import sys, json, re
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
 from time import sleep, time
+from typing import Pattern
 
 MINUTES = 60
 HOURS = 3600
@@ -39,6 +40,14 @@ def log(s):
     except UnicodeEncodeError:
         xbmc.log(message.encode('utf-8'))
 
+def is_torrserve_v2_link(url):
+    pattern = r'http://.+/stream/.+\?link=[a-f\d]{40}&index=\d+&play'
+    return re.match(pattern, url) is not None
+
+def is_torrserve_v1_link(url):
+    pattern = r'http://.+/torrent/view/[a-f\d]{40}/'
+    return re.match(pattern, url) is not None
+
 def playing_torrserver_source():
     # type: () -> bool
     import xbmc
@@ -47,8 +56,9 @@ def playing_torrserver_source():
     if player.isPlayingVideo():
         name = player.getPlayingFile()
         if name:
-            if ':{}/'.format(ts_settings.port) in name:
+            if ':{}/'.format(ts_settings.port) in name or is_torrserve_v2_link(name) or is_torrserve_v1_link(name):
                 return True
+            
     return False
 
 def alert(s):
