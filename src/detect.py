@@ -73,11 +73,21 @@ def clean_part(part):
     #part = re.sub(r'\(.+?\)', part)
     return part.strip()
 
+def clean_title(part):
+    part = clean_part(part)
+    part = re.sub(r'\(.+?\)', '', part)
+    return part.strip()
+
 def _extract_KT_title_year(title):
     pattern = r'\[KT\] (.+) \((19[0-9][0-9]|20[0-9][0-9])\)'
     m = re.match(pattern, title)
     if m:
         return { 'title': m.group(1), 'year': m.group(2) }
+
+def _find_date_period(source):
+    m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9])\s*-\s*(19[0-9][0-9]|20[0-9][0-9]) /', source)    
+    if m:
+        return m.group(1), m.group(2)
 
 def extract_original_title_year(title):
     source = title
@@ -90,12 +100,13 @@ def extract_original_title_year(title):
 
     if '/' in source:
         parts = source.split('/')
-        title = parts[0]
+        title = clean_title(parts[0])
+        parts[0] = title
 
         parts = [ clean_part(part) for part in parts ]
         parts = list(filter(validate_part, parts))
 
-        original_title = parts[1] if len(parts) == 2 else None
+        original_title = parts[1] if len(parts) >= 2 else None
 
         m = re.search(r'/ (19[0-9][0-9]|20[0-9][0-9]) /', source)
         if m:
@@ -103,6 +114,8 @@ def extract_original_title_year(title):
             parts = source.split(m.group(0))[0]
             parts = parts.split('/')
             original_title = parts[-1]
+        elif _find_date_period(source):
+            year = _find_date_period(source)[0]
         else:
             for part in reversed(parts[1:]):
                 m = re.search(r'(19[0-9][0-9]|20[0-9][0-9])', part.strip())
