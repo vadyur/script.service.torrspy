@@ -157,15 +157,15 @@ class MyPlayer(xbmc.Player):
                 item.setInfo('video', video_info)
 
                 self.updateInfoTag(item)                
-                tag = self.getVideoInfoTag()
+                # tag = self.getVideoInfoTag()
 
-                if tag.getTagLine() != self.tagline:
-                    log('reopen stream')
-                    video_info.update(self.getVideoInfo())
-                    item.setInfo('video', video_info)
-                    self.play(file, item, False)
-                else:
-                    log('Keep stream opened')
+                # if tag.getTagLine() != self.tagline:
+                #     log('reopen stream')
+                #     video_info.update(self.getVideoInfo())
+                #     item.setInfo('video', video_info)
+                #     self.play(file, item, False)
+                # else:
+                #     log('Keep stream opened')
 
     def onPlayBackStopped(self):
         log('onPlayBackStopped')
