@@ -60,8 +60,8 @@ def make_path_to_base_relative(path):
     return filesystem.join(addon_base_path(), path)
 
 def log(s):
-    message = '[{}: info.py]: {}'.format('script.service.torrspy', s)
-    xbmc.log(message)
+    from . import _unit_log
+    _unit_log('info.py', s)
 
 def save_video_info(hash, video_info):
     if 'imdbnumber' not in video_info:

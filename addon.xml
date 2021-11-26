@@ -15,6 +15,9 @@
     <provides>executable</provides>
   </extension>
 
+  <extension point="xbmc.python.module" library="src"/>
+
+
   <extension point="xbmc.addon.metadata">
     <platform>all</platform>
     <summary lang="ru">Сервис TorrSpy</summary>

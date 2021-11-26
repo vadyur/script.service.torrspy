@@ -16,9 +16,10 @@ addon = xbmcaddon.Addon()
 addon_id = addon.getAddonInfo('id')
 addon_path = addon.getAddonInfo('path')
 
+
 def log(s):
-    message = '[{}: service.py]: {}'.format(addon_id, s)
-    xbmc.log(message)
+    from .torrspy import _unit_log
+    _unit_log('service.py', s)
 
 def make_url(action):
     if action:
