@@ -16,7 +16,6 @@ addon = xbmcaddon.Addon()
 addon_id = addon.getAddonInfo('id')
 addon_path = addon.getAddonInfo('path')
 
-
 def log(s):
     from .torrspy import _unit_log
     _unit_log('service.py', s)
@@ -37,7 +36,7 @@ def RunPlugin(action):
 def RunScript(*args):
     import xbmc, os
 
-    path = os.path.join(addon_path, 'script.py')
+    path = addon_id # os.path.join(addon_path, 'script.py')
     args = [ str(i) for i in args ]
     param_str = ', '.join(args)
     xbmc.executebuiltin('RunScript({}, {})'.format(path, param_str))
