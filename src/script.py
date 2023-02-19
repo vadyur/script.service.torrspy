@@ -13,11 +13,11 @@ DAYS = HOURS * 24
 import requests
 
 from vdlib.util import filesystem
-from .torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
-from .torrspy.player_video_info import PlayerVideoInfo
+from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
+from vdlib.torrspy.player_video_info import PlayerVideoInfo
 
-from .torrspy.detect import is_video, extract_filename, extract_title_date, extract_original_title_year, find_tmdb_movie_item
-from .torrspy.strm_utils import save_movie, save_tvshow, save_movie_strm, save_tvshow_strms
+from vdlib.torrspy.detect import is_video, extract_filename, extract_title_date, extract_original_title_year, find_tmdb_movie_item
+from vdlib.torrspy.strm_utils import save_movie, save_tvshow, save_movie_strm, save_tvshow_strms
 
 if version_info >= (3, 0):
     from urllib.parse import urlparse, parse_qs
@@ -25,10 +25,10 @@ else:
     from urlparse import urlparse, parse_qs    # type: ignore
 
 from torrserve_stream.engine import Engine
-from .torrspy.strm_utils import ts_settings
+from vdlib.torrspy.strm_utils import ts_settings
 
 def log(s):
-    from .torrspy import _unit_log
+    from vdlib.torrspy import _unit_log
     _unit_log('script.py', s)
 
 def is_torrserve_v2_link(url):
@@ -396,7 +396,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         sleep(5)
 
 def schedule_add_all_from_torserver():
-    from .torrspy.info import add_all_from_torserver
+    from vdlib.torrspy.info import add_all_from_torserver
     if add_all_from_torserver():
         processed_items = ProcessedItems()
 

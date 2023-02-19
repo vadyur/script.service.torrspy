@@ -17,7 +17,7 @@ addon_id = addon.getAddonInfo('id')
 addon_path = addon.getAddonInfo('path')
 
 def log(s):
-    from .torrspy import _unit_log
+    from vdlib.torrspy import _unit_log
     _unit_log('service.py', s)
 
 def make_url(action):
@@ -55,7 +55,7 @@ class MyPlayer(xbmc.Player):
     tagline = '##TorrSpy##'
 
     def __init__(self):
-        from .torrspy.player_video_info import PlayerVideoInfo
+        from vdlib.torrspy.player_video_info import PlayerVideoInfo
         self.video_info = PlayerVideoInfo(self)
         xbmc.Player.__init__(self)
 
