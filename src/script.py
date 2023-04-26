@@ -12,17 +12,12 @@ DAYS = HOURS * 24
 
 import requests
 
-from vdlib.util import filesystem
+from vdlib.util import filesystem, urlparse, parse_qs
 from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
 from vdlib.torrspy.player_video_info import PlayerVideoInfo
 
 from vdlib.torrspy.detect import is_video, extract_filename, extract_title_date, extract_original_title_year, find_tmdb_movie_item
 from vdlib.torrspy.strm_utils import save_movie, save_tvshow, save_movie_strm, save_tvshow_strms
-
-if version_info >= (3, 0):
-    from urllib.parse import urlparse, parse_qs
-else:
-    from urlparse import urlparse, parse_qs    # type: ignore
 
 from torrserve_stream.engine import Engine
 from vdlib.torrspy.strm_utils import ts_settings
@@ -115,8 +110,12 @@ def get_info():
 
     art = engine.get_art()
 
+    saved_video_info = load_video_info(hash)
+    if saved_video_info:
+        video_info = saved_video_info
+
     if not video_info:
-        video_info = load_video_info(hash)
+        video_info = detect_video_info_from_title(engine.title)
 
     if not video_info:
         video_info = detect_video_info_from_filename(extract_filename(url))
@@ -139,6 +138,8 @@ def get_info():
     save_video_info(hash, video_info)
     save_art(hash, art)
 
+    return video_info, art
+
 def detect_video_info_from_filename(filename):
     log('Extract info')
     title, year = extract_title_date(filename)
@@ -152,14 +153,18 @@ def detect_video_info_from_filename(filename):
 def get_video_info_from_engine(engine, data=None):
     log('Get info from TorrServer')
     video_info = engine._get_video_info_from_data(data) if data else engine.get_video_info()
-    if video_info:
-        update_video_info(video_info)
+    #if video_info:
+    #    update_video_info(video_info)
     return video_info
 
-def update_video_info(video_info):
-    if 'imdbnumber' not in video_info:
-        if 'title' in video_info and not 'originaltitle' in video_info:
-            video_info.update(extract_original_title_year(video_info['title']))
+def detect_video_info_from_title(title):
+    r = extract_original_title_year(title)
+    return r
+
+# def update_video_info(video_info):
+#     if 'imdbnumber' not in video_info:
+#         if 'title' in video_info and not 'originaltitle' in video_info:
+#             video_info.update(extract_original_title_year(video_info['title']))
 
 def update_video_info_from_tmdb(video_info):
     tmdb_movie_item = find_tmdb_movie_item(video_info)
@@ -267,8 +272,9 @@ class ProcessedItems(object):
     def load(self):
         import errno
         try:
-            with filesystem.fopen(self.path, 'r') as f:
-                self.items = json.load(f)
+            if filesystem.exists(self.path):
+                with filesystem.fopen(self.path, 'r') as f:
+                    self.items = json.load(f)
         #except FileNotFoundError:
         except EnvironmentError as e:
             if e.errno != errno.ENOENT:
@@ -340,12 +346,13 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
     data = list_item.get('data', list_item.get('Info'))
     if data:
         video_info = get_video_info_from_engine(engine, data)
-    else:
+    
+    if not video_info:
         title = list_item.get('title')
-        video_info = { 'title': title } if title else None
-        if not video_info:
+        if not title:
             return processed_items.set_processed(list_item, 1 * DAYS)
-        update_video_info(video_info)
+        video_info = extract_original_title_year(title) if title else {}
+        #update_video_info(video_info)
 
     if not video_info:
         video_info = load_video_info(hash)
@@ -406,10 +413,10 @@ def schedule_add_all_from_torserver():
 
         processed_items.time_touch()
         log('schedule_add_all_from_torserver: processing...')
-        add_all_from_ts(processed_items)
+        add_all_from_processed_items(processed_items)
         log('schedule_add_all_from_torserver: processed')
 
-def add_all_from_ts(processed_items):
+def add_all_from_processed_items(processed_items):
     processed_items.load()
     engine = Engine(host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
     need_update = False
