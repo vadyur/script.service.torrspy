@@ -206,6 +206,9 @@ def main():
         if not player.isPlaying():
             continue
 
+        if not playing_torrserver_source():
+            continue
+
         try:
             vit = player.getVideoInfoTag()
         except RuntimeError:
