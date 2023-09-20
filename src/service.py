@@ -8,7 +8,7 @@ from time import time
 if version_info >= (3, 0, 0):
     from urllib.parse import quote_plus
 else:
-    from urllib import quote_plus
+    from urllib import quote_plus   #type: ignore
 
 from .script import playing_torrserver_source
 
@@ -156,7 +156,7 @@ class MyPlayer(xbmc.Player):
                 video_info = {'tagline' : self.tagline}
                 item.setInfo('video', video_info)
 
-                self.updateInfoTag(item)                
+                self.updateInfoTag(item)
                 # tag = self.getVideoInfoTag()
 
                 # if tag.getTagLine() != self.tagline:
@@ -222,7 +222,7 @@ def main():
             item = xbmcgui.ListItem()
             url = player.getPlayingFile()
             item.setPath(url)
-            item.setInfo('video', 
+            item.setInfo('video',
                         {'tagline': '',})
             player.updateInfoTag(item)
 
