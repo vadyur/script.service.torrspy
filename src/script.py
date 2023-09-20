@@ -4,7 +4,7 @@ import sys, json, re
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
 from time import sleep, time
-from typing import Pattern
+from typing import Pattern, Optional
 
 MINUTES = 60
 HOURS = 3600
@@ -44,7 +44,7 @@ def playing_torrserver_source():
         if name:
             if ':{}/'.format(ts_settings.port) in name or is_torrserve_v2_link(name) or is_torrserve_v1_link(name):
                 return True
-            
+
     return False
 
 def alert(s):
@@ -106,7 +106,7 @@ def get_info():
     hash = Engine.extract_hash_from_play_url(url)
     engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
 
-    video_info = get_video_info_from_engine(engine)            
+    video_info = get_video_info_from_engine(engine)
 
     art = engine.get_art()
 
@@ -183,7 +183,7 @@ def open_settings():
     addon = xbmcaddon.Addon()
     addon.openSettings()
 
-def create_playlists():    
+def create_playlists():
     from vdlib.kodi.compat import translatePath
     src_dir = translatePath('special://home/addons/script.service.torrspy/resources/playlists')
     dst_dir = translatePath('special://profile/playlists/video')
@@ -206,11 +206,11 @@ def create_sources():
     restart_msg = u'Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?'
 
     from vdlib.kodi.sources import create_movies_and_tvshows
-    if create_movies_and_tvshows(base_path, 
-                                 scrapper='metadata.themoviedb.org.python', 
-                                 scrapper_tv='metadata.tvshows.themoviedb.org.python', 
+    if create_movies_and_tvshows(base_path,
+                                 scrapper='metadata.themoviedb.org.python',
+                                 scrapper_tv='metadata.tvshows.themoviedb.org.python',
                                  suffix=' - TorrSpy'):
-        
+
         if Dialog().yesno(addon_title(), restart_msg):
             executebuiltin('Quit')
 
@@ -236,7 +236,7 @@ def end_playback(player_video_info_str):
         log('pvi.time is {}'.format(pvi.time))
 
         if pvi.media_type == 'movie':
-            if pvi.time >= 180 and percent < 90: 
+            if pvi.time >= 180 and percent < 90:
                 save_movie(pvi)
         elif pvi.media_type == 'tvshow':
             if pvi.time >= 180:
@@ -312,7 +312,7 @@ class ProcessedItems(object):
         return False
 
     def set_processed(self, list_item, timeout=None):
-        # type: (dict, float) -> bool
+        # type: (dict, Optional[float]) -> bool
         data = list_item.v2 if hasattr(list_item, 'v2') else list_item
         if timeout:
             data['next_attempt'] = time() + timeout
@@ -350,7 +350,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
     data = list_item.get('data', list_item.get('Info'))
     if data:
         video_info = get_video_info_from_engine(engine, data)
-    
+
     if not video_info:
         title = list_item.get('title')
         if not title:
@@ -372,7 +372,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
     save_video_info(hash, video_info)
 
     for n in range(5):
-        try:        
+        try:
             if video_info['mediatype'] == 'movie':
                 play_file = {}
                 for file in engine.files(ts):
@@ -381,13 +381,13 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
                 if play_file:
                     _, year = extract_title_date(play_file['path'])
                     if year and str(year) != str(video_info['year']):
-                        return processed_items.set_processed(list_item, 1 * DAYS)                        
+                        return processed_items.set_processed(list_item, 1 * DAYS)
 
                     sort_index = play_file['file_id']
                     play_url = engine.play_url(sort_index, ts)
-                    save_movie_strm(play_url, 
-                                    sort_index, 
-                                    original_title=video_info['originaltitle'], 
+                    save_movie_strm(play_url,
+                                    sort_index,
+                                    original_title=video_info['originaltitle'],
                                     year=video_info['year'])
                     return processed_items.set_processed(list_item)
             elif video_info['mediatype'] == 'tvshow':
@@ -405,6 +405,8 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
 
         print('Attempt #{}'.format(n+1+1))
         sleep(5)
+
+    return False
 
 def schedule_add_all_from_torserver():
     from vdlib.torrspy.info import add_all_from_torserver
