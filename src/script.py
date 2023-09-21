@@ -331,6 +331,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
     hash = list_item['Hash']
     engine.hash = hash
 
+    ts = {}
     log('Getting files list')
     for n in range(20):
         try:
