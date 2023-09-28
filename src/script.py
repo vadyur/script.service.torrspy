@@ -16,7 +16,7 @@ from vdlib.util import filesystem, urlparse, parse_qs
 from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
 from vdlib.torrspy.player_video_info import PlayerVideoInfo
 
-from vdlib.torrspy.detect import is_video, extract_filename, extract_title_date, extract_original_title_year, find_tmdb_movie_item
+from vdlib.torrspy.detect import get_tmdb_movie_item, is_video, extract_filename, extract_title_date, extract_original_title_year, find_tmdb_movie_item
 from vdlib.torrspy.strm_utils import save_movie, save_tvshow, save_movie_strm, save_tvshow_strms
 
 from torrserve_stream.engine import Engine
@@ -132,7 +132,7 @@ def get_info():
 
     update_listitem(video_info, art)
 
-    if 'imdbnumber' not in video_info:
+    if 'imdbnumber' not in video_info or 'director' not in video_info:
         update_video_info_from_tmdb(video_info)
         update_listitem(video_info, art)
 
@@ -168,6 +168,11 @@ def detect_video_info_from_title(title):
 #             video_info.update(extract_original_title_year(video_info['title']))
 
 def update_video_info_from_tmdb(video_info):
+    if "imdbnumber" in video_info:
+        tmdb_movie_item = get_tmdb_movie_item(video_info["imdbnumber"])
+        video_info.update(tmdb_movie_item.get_info())
+        return
+
     tmdb_movie_item = find_tmdb_movie_item(video_info)
     if tmdb_movie_item:
         imdbnumber = tmdb_movie_item.imdb()
