@@ -105,6 +105,7 @@ def get_info():
 
     hash = Engine.extract_hash_from_play_url(url)
     engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
+    engine._wait_for_data()
 
     video_info = get_video_info_from_engine(engine)
 
