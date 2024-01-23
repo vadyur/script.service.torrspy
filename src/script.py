@@ -4,7 +4,7 @@ import sys, json, re
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
 from time import sleep, time
-from typing import Optional
+from typing import Dict, Optional
 
 MINUTES = 60
 HOURS = 3600
@@ -95,6 +95,89 @@ def get_recent_episodes(fields):
     ]
     result = VideoLibrary.GetEpisodes(filter=filter, limits=limits, sort=sort, properties=fields)
 
+def validate_video_info(video_info: Dict):
+    if not video_info:
+        return
+
+    def list_of(l, t):
+        if not isinstance(l, list):
+            return False
+        for item in l:
+            if not isinstance(item, t):
+                return False
+        return True
+
+    def string_or_list(v):  return isinstance(v, str) or list_of(v, str)
+    def string_list(v):     return list_of(v, str)
+    def string(v):          return isinstance(v, str)
+    def integer(v):         return isinstance(v, int)
+    def _float(v):          return isinstance(v, float)
+    def _list(v):           return isinstance(v, list)
+
+    validators = {
+        "genre": string_or_list,
+        "country": string_or_list,
+        "year": integer,
+        "episode": integer,             # integer (4)
+        "season": integer,              # integer (1)
+        "sortepisode": integer,         # integer (4)
+        "sortseason": integer,          # integer (1)
+        "episodeguide": string,         # string (Episode guide)
+        "showlink": string_or_list,     # string (Battlestar Galactica) or list of strings (["Battlestar Galactica", "Caprica"])
+        "top250": integer,              # integer (192)
+        "setid": integer,               # integer (14)
+        "tracknumber": integer,         # integer (3)
+        "rating": _float,               # float (6.4) - range is 0..10
+        "userrating": integer,          # integer (9) - range is 1..10 (0 to reset)
+        "playcount": integer,           # integer (2) - number of times this item has been played
+        "overlay": integer,             # integer (2) - range is ``0..7``. See Overlay icon types for values
+        "cast": _list,                 # list (["Michal C. Hall","Jennifer Carpenter"]) - if provided a list of tuples cast will be interpreted as castandrole
+        "castandrole": _list,          # list of tuples ([("Michael C. Hall","Dexter"),("Jennifer Carpenter","Debra")])
+        "director": string_or_list,    # string (Dagur Kari) or list of strings (["Dagur Kari", "Quentin Tarantino", "Chrstopher Nolan"])
+        "mpaa": string,                # string (PG-13)
+        "plot": string,                # string (Long Description)
+        "plotoutline": string,         # string (Short Description)
+        "title": string,               # string (Big Fan)
+        "originaltitle": string,       # string (Big Fan)
+        "sorttitle": string,           # string (Big Fan)
+        "duration": integer,           # integer (245) - duration in seconds
+        "studio": string_or_list,      # string (Warner Bros.) or list of strings (["Warner Bros.", "Disney", "Paramount"])
+        "tagline": string,             # string (An awesome movie) - short description of movie
+        "writer": string,              # string (Robert D. Siegel) or list of strings (["Robert D. Siegel", "Jonathan Nolan", "J.K. Rowling"])
+        "tvshowtitle": string,         # string (Heroes)
+        "premiered": string,           # string (2005-03-04)
+        "status": string,              # string (Continuing) - status of a TVshow
+        "set": string,                 # string (Batman Collection) - name of the collection
+        "setoverview": string,         # string (All Batman movies) - overview of the collection
+        "tag": string,                 # string (cult) or list of strings (["cult", "documentary", "best movies"]) - movie tag
+        "imdbnumber": string,          # string (tt0110293) - IMDb code
+        "code": string,                # string (101) - Production code
+        "aired": string,               # string (2008-12-07)
+        "credits": string,             # string (Andy Kaufman) or list of strings (["Dagur Kari", "Quentin Tarantino", "Chrstopher Nolan"]) - writing credits
+        "lastplayed": string,          # string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+        "album": string,               # string (The Joshua Tree)
+        "artist": string_list,         # list (['U2'])
+        "votes": string,               # string (12345 votes)
+        "path": string,                # string (/home/user/movie.avi)
+        "trailer": string,             # string (/home/user/trailer.avi)
+        "dateadded": string,           # string (Y-m-d h:m:s = 2009-04-05 23:16:04)
+        "mediatype": string,           # string - "video", "movie", "tvshow", "season", "episode" or "musicvideo"
+        "dbid": integer                # integer (23) - Only add this for items which are part of the local db. You also need to set the correct 'mediatype'!
+    }
+
+    keys_to_remove = []
+    for k, v in video_info.items():
+        if k not in validators:
+            keys_to_remove.append(k)
+        else:
+            check = validators[k]
+            if not check(v):
+                keys_to_remove.append(k)
+
+    for k in keys_to_remove:
+        del video_info[k]
+
+
 def get_info():
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
@@ -122,7 +205,11 @@ def get_info():
         video_info = detect_video_info_from_filename(extract_filename(url))
 
     def update_listitem(video_info, art):
-        if video_info: item.setInfo('video', video_info)
+        log("TorrSpy: update_listitem")
+
+        if video_info:
+            validate_video_info(video_info)
+            item.setInfo('video', video_info)
         if art: item.setArt(art)
 
         xbmc.Player().updateInfoTag(item)
