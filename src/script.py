@@ -182,8 +182,14 @@ def get_info():
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
     xbmc.sleep(2*1000)
+
+    player = xbmc.Player()
+    if not player.isPlaying():
+        return
+
     item = xbmcgui.ListItem()
-    url = xbmc.Player().getPlayingFile()
+
+    url = player.getPlayingFile()
     item.setPath(url)
 
     hash = Engine.extract_hash_from_play_url(url)
@@ -212,10 +218,10 @@ def get_info():
             item.setInfo('video', video_info)
         if art: item.setArt(art)
 
-        xbmc.Player().updateInfoTag(item)
+        player.updateInfoTag(item)
 
     log('---TorrSpy---')
-    log(xbmc.Player().getPlayingFile())
+    log(player.getPlayingFile())
 
     update_listitem(video_info, art)
 
