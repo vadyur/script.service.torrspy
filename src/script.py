@@ -6,6 +6,8 @@ from sys import version_info
 from time import sleep, time
 from typing import Dict, Optional
 
+from vdlib.kodi.jsonrpc_requests import Files
+
 MINUTES = 60
 HOURS = 3600
 DAYS = HOURS * 24
@@ -291,13 +293,65 @@ def create_sources():
         if Dialog().yesno(addon_title(), restart_msg):
             executebuiltin('Quit')
 
+def load_pos_from_tsc_next(play_url):
+    log('load_pos_from_tsc_next: play_url = {}'.format(play_url))
+    if not play_url:
+        return 0
+
+    hash = Engine.extract_hash_from_play_url(play_url)
+    engine = Engine(hash=hash, **ts_settings.engine_args)
+    engine._wait_for_data()
+
+    filename = Engine.extract_filename_from_play_url(play_url)
+    index = engine.get_ts_index(filename)
+
+    gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
+
+    result = Files.GetFileDetails(file=gen_file, media='video', properties=['resume'])
+    log(result)
+
+    if result:
+        resume = result.get('filedetails', {}).get('resume', {})
+        if resume:
+            return resume.get('position', 0)
+
+
+def save_pos_to_tsc_next(position, totaltime, play_url):
+    log('save_pos_to_tsc_next: time = {}, totaltime = {}, play_url = {}'.format(position, totaltime, play_url))
+    if not position or not play_url:
+        return
+
+    hash = Engine.extract_hash_from_play_url(play_url)
+    engine = Engine(hash=hash, **ts_settings.engine_args)
+    engine._wait_for_data()
+
+    filename = Engine.extract_filename_from_play_url(play_url)
+    index = engine.get_ts_index(filename)
+
+    gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
+
+    result = Files.SetFileDetails(file=gen_file, media='video', resume={
+        'position': position,
+        'total': totaltime
+    })
+
+    log(result)
+
+
 def end_playback(player_video_info_str):
+    log("=== end_playback ===")
+
     pvi = PlayerVideoInfo(None)
     pvi.loads(player_video_info_str)
 
     video_info  = pvi.video_info
     play_url    = pvi.play_url
     sort_index  = pvi.sort_index
+
+    log("  play_url = {}".format(play_url))
+
+    if pvi.time and pvi.total_time:
+        save_pos_to_tsc_next(pvi.time, pvi.total_time, play_url)
 
     if not video_info:
         log('video_info does not exists')
@@ -513,6 +567,16 @@ def add_all_from_processed_items(processed_items):
         from xbmc import executebuiltin
         executebuiltin('UpdateLibrary("video")')
 
+def seek_saved_pos():
+    import xbmc
+    player = xbmc.Player()
+    if not player.isPlayingVideo():
+        return
+    log('---TorrSpy: seek_saved_pos---')
+    pos = load_pos_from_tsc_next(player.getPlayingFile())
+    if pos:
+        player.seekTime(pos)
+
 def main():
     #Runner(sys.argv[0])
     log('---TorrSpy---')
@@ -536,5 +600,7 @@ def main():
         create_sources()
     elif arg_exists('schedule_add_all_from_torserver', 1):
         schedule_add_all_from_torserver()
+    elif arg_exists('seek_saved_pos', 1):
+        seek_saved_pos()
     else:
         open_settings()
