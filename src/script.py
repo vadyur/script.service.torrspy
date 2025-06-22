@@ -575,7 +575,10 @@ def seek_saved_pos():
     log('---TorrSpy: seek_saved_pos---')
     pos = load_pos_from_tsc_next(player.getPlayingFile())
     if pos:
-        player.seekTime(pos)
+        try:
+            player.seekTime(pos)
+        except RuntimeError:
+            log('Error seeking to saved position: {}'.format(pos))
 
 def main():
     #Runner(sys.argv[0])
