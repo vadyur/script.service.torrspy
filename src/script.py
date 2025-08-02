@@ -15,7 +15,7 @@ DAYS = HOURS * 24
 import requests
 
 from vdlib.util import filesystem, urlparse, parse_qs
-from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path
+from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path, settings_get_save_position
 from vdlib.torrspy.player_video_info import PlayerVideoInfo
 
 from vdlib.torrspy.detect import is_video, extract_filename, extract_title_date, extract_original_title_year, update_video_info_from_tmdb
@@ -315,8 +315,11 @@ def load_pos_from_tsc_next(play_url):
         if resume:
             return resume.get('position', 0)
 
-
 def save_pos_to_tsc_next(position, totaltime, play_url):
+
+    if not settings_get_save_position():
+        return
+
     log('save_pos_to_tsc_next: time = {}, totaltime = {}, play_url = {}'.format(position, totaltime, play_url))
     if not position or not play_url:
         return
@@ -568,6 +571,9 @@ def add_all_from_processed_items(processed_items):
         executebuiltin('UpdateLibrary("video")')
 
 def seek_saved_pos():
+    if not settings_get_save_position():
+        return
+
     import xbmc
     player = xbmc.Player()
     if not player.isPlayingVideo():
