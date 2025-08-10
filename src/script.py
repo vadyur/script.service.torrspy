@@ -202,9 +202,9 @@ def get_info():
 
     art = engine.get_art()
 
-    saved_video_info = load_video_info(hash)
-    if saved_video_info:
-        video_info = saved_video_info
+    # saved_video_info = load_video_info(hash)
+    # if saved_video_info:
+    #     video_info = saved_video_info
 
     if not video_info:
         video_info = detect_video_info_from_title(engine.title)
@@ -228,10 +228,10 @@ def get_info():
     update_listitem(video_info, art)
 
     if 'imdbnumber' not in video_info or 'director' not in video_info:
-        update_video_info_from_tmdb(video_info, art)
+        update_video_info_from_tmdb(video_info, art, url)
         update_listitem(video_info, art)
 
-    save_video_info(hash, video_info)
+    # save_video_info(hash, video_info)
     save_art(hash, art)
 
     return video_info, art
@@ -372,10 +372,8 @@ def end_playback(player_video_info_str):
         if pvi.media_type == 'movie':
             if pvi.time >= 180 and percent < 90:
                 save_movie(pvi)
-        elif pvi.media_type == 'tvshow':
+        elif pvi.media_type == 'tvshow' or pvi.media_type == 'episode':
             if pvi.time >= 180:
-                #import vsdbg
-                #vsdbg.breakpoint()
                 save_tvshow(pvi)
 
         log("media_type = '{}'".format(pvi.media_type))
