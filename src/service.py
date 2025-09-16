@@ -195,14 +195,17 @@ def main():
             schedule_add_all_from_torserver_last_run = now
 
         if not player.isPlaying():
+            log('not playing')
             continue
 
         if not playing_torrserver_source():
+            log('not playing torrserver source')
             continue
 
         try:
             vit = player.getVideoInfoTag()
         except RuntimeError:
+            log('getVideoInfoTag RuntimeError')
             continue
 
         player.video_info.update()

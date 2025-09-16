@@ -570,14 +570,18 @@ def add_all_from_processed_items(processed_items):
 
 def seek_saved_pos():
     if not settings_get_save_position():
+        log('seek_saved_pos: not save position')
         return
 
     import xbmc
     player = xbmc.Player()
     if not player.isPlayingVideo():
+        log('seek_saved_pos: not playing')
         return
+
     log('---TorrSpy: seek_saved_pos---')
     pos = load_pos_from_tsc_next(player.getPlayingFile())
+    log('seek_saved_pos: {}'.format(pos))
     if pos:
         try:
             player.seekTime(pos)
