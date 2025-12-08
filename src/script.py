@@ -481,7 +481,9 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         return processed_items.set_processed(list_item, 1 * HOURS)
 
     video_info = {}
-    data = list_item.get('data', list_item.get('Info'))
+    data = list_item.get('data')
+    if data is None:
+        data = list_item.get('Info')
     if data:
         video_info = get_video_info_from_engine(engine, data)
 
