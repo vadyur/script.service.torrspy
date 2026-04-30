@@ -24,4 +24,8 @@
         action="InstallAddon(plugin.video.torrserve-next)"
         label="Установить `TSC NEXT!`" />
   </category>
+  <category label="TMDB (metadata language)">
+    <setting type="select" id="tmdb_language" label="TMDB language" default="auto"
+        values="auto|en|ru|ro|uk|be|de|fr|es|it" />
+  </category>
 </settings>
