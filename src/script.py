@@ -51,7 +51,7 @@ def playing_torrserver_source():
 
 def alert(s):
     import xbmcgui
-    xbmcgui.Dialog().ok('TorrSpy', s)
+    xbmcgui.Dialog().ok(addon_title(), s)
 
 def get_params(url):
     res = urlparse(url)
@@ -262,6 +262,17 @@ def open_settings():
     addon = xbmcaddon.Addon()
     addon.openSettings()
 
+def test_settings():
+    from vdlib.util.log import debug
+    from vdlib.torrspy.info import addon_setting, add_movies_to_lib, add_tvshows_to_lib
+    settings = ["base_path", "add_movies_to_lib", "add_tvshows_to_lib",
+                "add_all_from_torserver", "save_position", "tmdb_language"]
+    for setting in settings:
+        debug(setting + ': ' + addon_setting(setting))
+
+    debug(add_movies_to_lib())
+    debug(add_tvshows_to_lib())
+
 def create_playlists():
     from vdlib.kodi.compat import translatePath
     src_dir = translatePath('special://home/addons/script.service.torrspy/resources/playlists')
@@ -278,17 +289,18 @@ def create_playlists():
 
 def create_sources():
     from xbmcgui import Dialog
-    from xbmcaddon import Addon
     from xbmc import executebuiltin
+    from vdlib.util.lang import translate_torrspy as trans
 
     base_path = addon_base_path()
-    restart_msg = u'Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?'
+    restart_msg = trans(32030)
 
     from vdlib.kodi.sources import create_movies_and_tvshows
     if create_movies_and_tvshows(base_path,
                                  scrapper='metadata.themoviedb.org.python',
                                  scrapper_tv='metadata.tvshows.themoviedb.org.python',
-                                 suffix=' - TorrSpy'):
+                                 suffix=' - TorrSpy',
+                                 translates={'movies': trans(32034), 'tvshows': trans(32035)}):
 
         if Dialog().yesno(addon_title(), restart_msg):
             executebuiltin('Quit')
@@ -499,7 +511,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
 
     needed_fields = set(['imdbnumber', 'mediatype', 'originaltitle'])
     def keys():
-        return video_info.keys() if version_info >= (3, 0) else video_info.viewkeys()
+        return video_info.keys()
     if needed_fields & keys() != needed_fields:
         update_video_info_from_tmdb(video_info)
         if needed_fields & keys() != needed_fields:
@@ -615,5 +627,7 @@ def main():
         schedule_add_all_from_torserver()
     elif arg_exists('seek_saved_pos', 1):
         seek_saved_pos()
+    elif arg_exists('test_settings', 1):
+        test_settings()
     else:
         open_settings()

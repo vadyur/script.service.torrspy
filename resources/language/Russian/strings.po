@@ -1,0 +1,83 @@
+# Kodi Media Center language file
+# Addon Name: TorrSpy
+# Addon id: script.service.torrspy
+# Addon Provider: -=Vd=-
+
+msgid ""
+msgstr ""
+
+msgctxt "#32000"
+msgid "General"
+msgstr "Основные"
+
+msgctxt "#32001"
+msgid "Media library path"
+msgstr "Путь сохранения медиатеки"
+
+msgctxt "#32002"
+msgid "Add unwatched movies to library"
+msgstr "Добавлять недосмотренные фильмы в медиатеку"
+
+msgctxt "#32003"
+msgid "Add unwatched TV shows to library"
+msgstr "Добавлять недосмотренные сериалы в медиатеку"
+
+msgctxt "#32004"
+msgid "Add all torrents from TorrServer to library"
+msgstr "Добавлять все раздачи из базы TorrServer в медиатеку"
+
+msgctxt "#32005"
+msgid "Save position in video from TorrServe"
+msgstr "Сохранять позицию в видео запущенном из TorrServe"
+
+msgctxt "#32010"
+msgid "Actions"
+msgstr "Действия"
+
+msgctxt "#32011"
+msgid "Create sources for library"
+msgstr "Создать источники для медиатеки"
+
+msgctxt "#32012"
+msgid "Create playlists for Android TV channels"
+msgstr "Создать плейлисты для каналов Android TV"
+
+msgctxt "#32013"
+msgid "Install TSC NEXT!"
+msgstr "Установить `TSC NEXT!`"
+
+msgctxt "#32020"
+msgid "Ask"
+msgstr "спросить"
+
+msgctxt "#32021"
+msgid "Automatically"
+msgstr "автоматически"
+
+msgctxt "#32022"
+msgid "No"
+msgstr "нет"
+
+msgctxt "#32030"
+msgid "To apply changes, Kodi must be restarted. Restart?"
+msgstr "Чтобы изменения вступили в силу, нужно перезапустить KODI. Перезапустить?"
+
+msgctxt "#32031"
+msgid "TorrSpy"
+msgstr "TorrSpy"
+
+msgctxt "#32032"
+msgid "Movie not completed. Would you like to save it to your media library to watch later?"
+msgstr "Кино не досмотрено. Сохранить его в медиатеку для последующего просмотра?"
+
+msgctxt "#32033"
+msgid "This TV show is not in your media library. Would you like to save it for later viewing?"
+msgstr "Этот сериал не в медиатеке, сохранить для последующего просмотра?"
+
+msgctxt "#32034"
+msgid "Movies"
+msgstr "Фильмы"
+
+msgctxt "#32035"
+msgid "TV Shows"
+msgstr "Сериалы"
