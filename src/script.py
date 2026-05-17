@@ -4,9 +4,10 @@ import sys, json, re
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
 from time import sleep, time
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from vdlib.kodi.jsonrpc_requests import Files
+from vdlib.kodi.video_info import Art, VideoInfo
 
 MINUTES = 60
 HOURS = 3600
@@ -18,7 +19,7 @@ from vdlib.util import filesystem, urlparse, parse_qs
 from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path, settings_get_save_position
 from vdlib.torrspy.player_video_info import PlayerVideoInfo
 
-from vdlib.torrspy.detect import is_video, extract_filename, extract_title_date, extract_original_title_year, update_video_info_from_tmdb
+from vdlib.torrspy.detect import detect_tvshow, is_video, extract_filename, extract_title_date, extract_original_title_year, update_video_info_from_tmdb
 from vdlib.torrspy.strm_utils import save_movie, save_tvshow, save_movie_strm, save_tvshow_strms
 
 from torrserve_stream.engine import Engine
@@ -97,7 +98,7 @@ def get_recent_episodes(fields):
     ]
     result = VideoLibrary.GetEpisodes(filter=filter, limits=limits, sort=sort, properties=fields)
 
-def validate_video_info(video_info: Dict):
+def make_valid_video_info(video_info: VideoInfo):
     if not video_info:
         return
 
@@ -180,7 +181,7 @@ def validate_video_info(video_info: Dict):
         del video_info[k]
 
 
-def get_info():
+def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
     xbmc.sleep(2*1000)
@@ -198,9 +199,9 @@ def get_info():
     engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
     engine._wait_for_data()
 
-    video_info = get_video_info_from_engine(engine)
+    video_info: VideoInfo = get_video_info_from_engine(engine)
 
-    art = engine.get_art()
+    art: Art = engine.get_art() # type: ignore
 
     # saved_video_info = load_video_info(hash)
     # if saved_video_info:
@@ -212,13 +213,13 @@ def get_info():
     if not video_info:
         video_info = detect_video_info_from_filename(extract_filename(url))
 
-    def update_listitem(video_info, art):
+    def update_listitem(video_info: VideoInfo, art: Art):
         log("TorrSpy: update_listitem")
 
         if video_info:
-            validate_video_info(video_info)
-            item.setInfo('video', video_info)
-        if art: item.setArt(art)
+            make_valid_video_info(video_info)
+            item.setInfo('video', video_info) # type: ignore
+        if art: item.setArt(art) # type: ignore
 
         player.updateInfoTag(item)
 
@@ -228,7 +229,11 @@ def get_info():
     update_listitem(video_info, art)
 
     if 'imdbnumber' not in video_info or 'director' not in video_info:
-        update_video_info_from_tmdb(video_info, art, url)
+        isTVShow = None
+        if engine.title:
+            isTVShow = detect_tvshow(engine.title)
+
+        update_video_info_from_tmdb(video_info, art, url=url, isTVshow=isTVShow)
         update_listitem(video_info, art)
 
     # save_video_info(hash, video_info)
@@ -236,24 +241,24 @@ def get_info():
 
     return video_info, art
 
-def detect_video_info_from_filename(filename):
+def detect_video_info_from_filename(filename) -> VideoInfo:
     log('Extract info')
     title, year = extract_title_date(filename)
-    video_info = {}
+    video_info: VideoInfo = {}
     if year:
-        video_info['year'] = year
+        video_info['year'] = int(year)
     if title:
         video_info['title'] = title
     return video_info
 
-def get_video_info_from_engine(engine, data=None):
+def get_video_info_from_engine(engine, data=None) -> VideoInfo:
     log('Get info from TorrServer')
     video_info = engine._get_video_info_from_data(data) if data else engine.get_video_info()
     #if video_info:
     #    update_video_info(video_info)
     return video_info
 
-def detect_video_info_from_title(title):
+def detect_video_info_from_title(title) -> VideoInfo:
     r = extract_original_title_year(title)
     return r
 
@@ -457,7 +462,7 @@ class ProcessedItems(object):
 
     def set_processed(self, list_item, timeout=None):
         # type: (dict, Optional[float]) -> bool
-        data = list_item.v2 if hasattr(list_item, 'v2') else list_item
+        data = list_item.v2 if hasattr(list_item, 'v2') else list_item # type: ignore
         if timeout:
             data['next_attempt'] = time() + timeout
 
@@ -492,7 +497,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
         log("Files list does't exists!!!")
         return processed_items.set_processed(list_item, 1 * HOURS)
 
-    video_info = {}
+    video_info: VideoInfo = {}
     data = list_item.get('data')
     if data is None:
         data = list_item.get('Info')
@@ -521,24 +526,28 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
 
     for n in range(5):
         try:
-            if video_info['mediatype'] == 'movie':
+            if video_info.get('mediatype') == 'movie':
                 play_file = {}
                 for file in engine.files(ts):
                     if file['size'] > play_file.get('size', 0) and is_video(file['path']):
                         play_file = file
                 if play_file:
                     _, year = extract_title_date(play_file['path'])
-                    if year and str(year) != str(video_info['year']):
+                    if year and year != str(video_info.get('year')):
                         return processed_items.set_processed(list_item, 1 * DAYS)
 
                     sort_index = play_file['file_id']
                     play_url = engine.play_url(sort_index, ts)
-                    save_movie_strm(play_url,
-                                    sort_index,
-                                    original_title=video_info['originaltitle'],
-                                    year=video_info['year'])
+                    originaltitle = video_info.get('originaltitle')
+                    year = video_info.get('year')
+
+                    if originaltitle and year:
+                        save_movie_strm(play_url,
+                                        sort_index,
+                                        original_title=originaltitle,
+                                        year=year)
                     return processed_items.set_processed(list_item)
-            elif video_info['mediatype'] == 'tvshow':
+            elif video_info.get('mediatype') == 'tvshow':
                 save_tvshow_strms(video_info.get('title'),
                                 video_info.get('originaltitle'),
                                 video_info.get('year'),
@@ -575,7 +584,7 @@ def add_all_from_processed_items(processed_items):
     engine = Engine(host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
     need_update = False
     for list_item in engine.list():
-        need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items)
+        need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items) # type: ignore
     processed_items.save()
 
     if need_update:
