@@ -21,9 +21,11 @@
     <platform>all</platform>
     <summary lang="ru">Сервис TorrSpy</summary>
     <summary lang="en">TorrSpy Service</summary>
+    <summary lang="ro">Serviciu TorrSpy</summary>
     <description lang="ru">Плагин предназначен для получения и отображения метаинформации о проигрываемом фильме/сериале запущенном в Kodi извне через TorrServer. Сохраняет позицию в проигрываемом видео. Также данный аддон позволяет сохранить недосмотренный фильм/сериал в медиатеку Kodi.</description>
     <description lang="en">Plugin designed to retrieve and display metadata for a movie/series played in Kodi from outside via TorrServer. Saves position in the playing video. This add-on also allows saving an unwatched movie/series to the Kodi library.</description>
     <description lang="en">A plugin designed to fetch and display metadata about a movie/series played in Kodi from external sources via TorrServer. It saves the position in the playing video. This add-on also allows saving an incomplete movie/series to the Kodi media library.</description>
+    <description lang="ro">Plugin conceput pentru a prelua și afișa metadatele unui film sau serial redat în Kodi din surse externe prin intermediul TorrServer. Salvează poziția în videoclipul redat. Acest add-on permite salvarea unui film sau serial nevăzut în biblioteca Kodi.</description>
     <source>https://github.com/vadyur/script.service.torrspy</source>
     <assets>
         <icon>resources/icon.png</icon>
