@@ -315,14 +315,21 @@ def load_pos_from_tsc_next(play_url):
     if not play_url:
         return 0
 
-    hash = Engine.extract_hash_from_play_url(play_url)
-    engine = Engine(hash=hash, **ts_settings.engine_args)
-    engine._wait_for_data()
+    try:
+        hash = Engine.extract_hash_from_play_url(play_url)
+        engine = Engine(hash=hash, **ts_settings.engine_args)
+        engine._wait_for_data()
 
-    filename = Engine.extract_filename_from_play_url(play_url)
-    index = engine.get_ts_index(filename)
-
-    gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
+        filename = Engine.extract_filename_from_play_url(play_url)
+        index = engine.get_ts_index(filename)
+        if index is None:
+            log('Could not find index for file: {}'.format(filename))
+            return 0
+        
+        gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
+    except Exception as e:
+        log('Error in load_pos_from_tsc_next: {}'.format(str(e)))
+        return 0
 
     result = Files.GetFileDetails(file=gen_file, media='video', properties=['resume'])
     log(result)
@@ -341,14 +348,21 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
     if not position or not play_url:
         return
 
-    hash = Engine.extract_hash_from_play_url(play_url)
-    engine = Engine(hash=hash, **ts_settings.engine_args)
-    engine._wait_for_data()
+    try:
+        hash = Engine.extract_hash_from_play_url(play_url)
+        engine = Engine(hash=hash, **ts_settings.engine_args)
+        engine._wait_for_data()
 
-    filename = Engine.extract_filename_from_play_url(play_url)
-    index = engine.get_ts_index(filename)
-
-    gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
+        filename = Engine.extract_filename_from_play_url(play_url)
+        index = engine.get_ts_index(filename)
+        if index is None:
+            log('Could not find index for file: {}'.format(filename))
+            return
+        
+        gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
+    except Exception as e:
+        log('Error in save_pos_to_tsc_next: {}'.format(str(e)))
+        return
 
     result = Files.SetFileDetails(file=gen_file, media='video', resume={
         'position': position,
@@ -603,13 +617,16 @@ def seek_saved_pos():
         return
 
     log('---TorrSpy: seek_saved_pos---')
-    pos = load_pos_from_tsc_next(player.getPlayingFile())
-    log('seek_saved_pos: {}'.format(pos))
-    if pos:
-        try:
-            player.seekTime(pos)
-        except RuntimeError:
-            log('Error seeking to saved position: {}'.format(pos))
+    try:
+        pos = load_pos_from_tsc_next(player.getPlayingFile())
+        log('seek_saved_pos: {}'.format(pos))
+        if pos:
+            try:
+                player.seekTime(pos)
+            except RuntimeError:
+                log('Error seeking to saved position: {}'.format(pos))
+    except Exception as e:
+        log('Error in seek_saved_pos: {}'.format(str(e)))
 
 def main():
     #Runner(sys.argv[0])
