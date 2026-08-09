@@ -371,6 +371,35 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
 
     log(result)
 
+def save_playback_position(player_video_info_str):
+    log("=== save_playback_position ===")
+
+    try:
+        pvi = PlayerVideoInfo(None)
+        pvi.loads(player_video_info_str)
+
+        if not pvi.play_url:
+            log("save_playback_position: no play_url")
+            return
+
+        if pvi.time is None or pvi.total_time is None:
+            log("save_playback_position: no playback time")
+            return
+
+        if pvi.time <= 0 or pvi.total_time <= 0:
+            log("save_playback_position: invalid playback time")
+            return
+
+        save_pos_to_tsc_next(
+            pvi.time,
+            pvi.total_time,
+            pvi.play_url
+        )
+
+    except Exception as e:
+        log(
+            "Error in save_playback_position: {}".format(str(e))
+        )
 
 def end_playback(player_video_info_str):
     log("=== end_playback ===")
@@ -643,6 +672,8 @@ def main():
 
     if arg_exists('get_info', 1):
         get_info()
+    elif arg_exists('save_playback_position', 1):
+        save_playback_position(sys.argv[2])
     elif arg_exists('end_playback', 1):
         end_playback(sys.argv[2])
     elif arg_exists('create_playlists', 1):
