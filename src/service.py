@@ -185,6 +185,9 @@ def main():
 
     schedule_add_all_from_torserver_last_run = time()
 
+    position_save_interval = 30
+    last_position_save = time()
+
     while not monitor.abortRequested():
         if monitor.waitForAbort(2):
             break
@@ -209,6 +212,25 @@ def main():
             continue
 
         player.video_info.update()
+
+        now = time()
+
+        if now >= last_position_save + position_save_interval:
+            log('Saving playback position')
+
+            try:
+                RunScript(
+                    'save_playback_position',
+                    player.video_info.dumps()
+                )
+            except Exception as e:
+                log(
+                    'Error saving playback position: {}'.format(
+                        str(e)
+                    )
+                )
+
+            last_position_save = now
 
         if vit.getTagLine() == player.tagline:
             log('reset tagline')
