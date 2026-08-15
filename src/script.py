@@ -643,7 +643,7 @@ def schedule_add_all_from_torserver():
 
 def add_all_from_processed_items(processed_items):
     processed_items.load()
-    engine = Engine(host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
+    engine = Engine(**ts_settings.engine_args)
     need_update = False
     for list_item in engine.list():
         need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items) # type: ignore
