@@ -336,8 +336,21 @@ def load_pos_from_tsc_next(play_url):
 
     if result:
         resume = result.get('filedetails', {}).get('resume', {})
-        if resume:
-            return resume.get('position', 0)
+
+        if resume and resume.get('position', 0) > 0:
+            local_position = resume.get('position', 0)
+            log('Using local position: {}'.format(local_position))
+
+            # Local -> seek
+            return local_position
+
+        remote_position = engine.get_viewed_from_torrserver(hash, index)
+
+        if remote_position is not None and remote_position > 0:
+            log('Using TorrServer position: {}'.format(remote_position))
+            return remote_position
+
+    return 0
 
 def save_pos_to_tsc_next(position, totaltime, play_url):
 
@@ -370,6 +383,7 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
     })
 
     log(result)
+    engine.save_viewed_to_torrserver(hash, index, position)
 
 def save_playback_position(player_video_info_str):
     log("=== save_playback_position ===")
