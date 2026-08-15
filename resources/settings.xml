@@ -7,11 +7,11 @@
         label="32001"/>
     <!-- Add unwatched movies to library - label="32002" -->
     <!-- Values: 32000=Ask, 32021=Automatically, 32022=No -->
-    <setting type="enum" default="32020" id="add_movies_to_lib" enable="true" lvalues="32020|32021|32022"
+    <setting type="enum" default="0" id="add_movies_to_lib" enable="true" lvalues="32020|32021|32022"
         label="32002"/>
     <!-- Add unwatched TV shows to library - label="32003" -->
     <!-- Values: 32020=Ask, 32021=Automatically, 32022=No -->
-    <setting type="enum" default="32020" id="add_tvshows_to_lib" enable="true" lvalues="32020|32021|32022"
+    <setting type="enum" default="0" id="add_tvshows_to_lib" enable="true" lvalues="32020|32021|32022"
         label="32003"/>
     <!-- Add all torrents from TorrServer to library - label="32004" -->
     <setting type="bool" default="false" id="add_all_from_torserver" enable="true"
