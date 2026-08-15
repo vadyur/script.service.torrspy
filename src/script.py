@@ -186,12 +186,12 @@ def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     import xbmc, xbmcgui
 
     player = xbmc.Player()
-    
+
     for _ in range(20):
         if player.isPlaying() and player.getPlayingFile():
             break
         xbmc.sleep(100)
-    
+
     if not player.isPlaying():
         return
 
@@ -330,7 +330,7 @@ def load_pos_from_tsc_next(play_url):
         if index is None:
             log('Could not find index for file: {}'.format(filename))
             return 0
-        
+
         gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
     except Exception as e:
         log('Error in load_pos_from_tsc_next: {}'.format(str(e)))
@@ -349,7 +349,7 @@ def load_pos_from_tsc_next(play_url):
             # Local -> seek
             return local_position
 
-        remote_position = engine.get_viewed_from_torrserver(hash, index)
+        remote_position = engine.get_viewed_position(index)
 
         if remote_position is not None and remote_position > 0:
             log('Using TorrServer position: {}'.format(remote_position))
@@ -376,7 +376,7 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
         if index is None:
             log('Could not find index for file: {}'.format(filename))
             return
-        
+
         gen_file = f'plugin://plugin.video.torrserve-next/?action=play&hash={hash}&sort_index={index}'
     except Exception as e:
         log('Error in save_pos_to_tsc_next: {}'.format(str(e)))
@@ -388,7 +388,7 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
     })
 
     log(result)
-    engine.save_viewed_to_torrserver(hash, index, position)
+    engine.set_viewed_position(index, position)
 
 def save_playback_position(player_video_info_str):
     log("=== save_playback_position ===")
@@ -680,7 +680,7 @@ def main():
     #Runner(sys.argv[0])
     log('---TorrSpy---')
     for i in sys.argv:
-        log(i)
+        log(i[:100] + '...' if len(i) > 100 else i)
     log('---TorrSpy---')
 
     def arg_exists(arg, index):

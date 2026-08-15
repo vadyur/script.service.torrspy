@@ -154,7 +154,7 @@ class MyPlayer(xbmc.Player):
                 item.setPath(file)
 
                 video_info = {'tagline' : self.tagline}
-                item.setInfo('video', video_info)
+                item.setInfo('video', video_info)   # type: ignore
 
                 self.updateInfoTag(item)
 
