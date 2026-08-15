@@ -184,9 +184,14 @@ def make_valid_video_info(video_info: VideoInfo):
 def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
-    xbmc.sleep(2*1000)
 
     player = xbmc.Player()
+    
+    for _ in range(20):
+        if player.isPlaying() and player.getPlayingFile():
+            break
+        xbmc.sleep(100)
+    
     if not player.isPlaying():
         return
 
