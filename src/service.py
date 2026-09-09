@@ -187,6 +187,7 @@ def main():
 
     position_save_interval = 30
     last_position_save = time()
+    last_play_url = None
 
     while not monitor.abortRequested():
         if monitor.waitForAbort(2):
@@ -211,7 +212,14 @@ def main():
             log('getVideoInfoTag RuntimeError')
             continue
 
+        current_play_url = player.getPlayingFile()
         player.video_info.update()
+
+        if current_play_url != last_play_url:
+            log('Video changed: {} -> {}'.format(last_play_url, current_play_url))
+            last_play_url = current_play_url
+            last_position_save = time()
+            continue
 
         now = time()
 

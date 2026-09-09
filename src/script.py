@@ -366,6 +366,10 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
     if not position or not play_url:
         return
 
+    if totaltime and position > totaltime:
+        log('save_pos_to_tsc_next: position > totaltime, skip')
+        return
+
     try:
         hash = Engine.extract_hash_from_play_url(play_url)
         engine = Engine(hash=hash, **ts_settings.engine_args)
