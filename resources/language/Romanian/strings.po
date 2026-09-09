@@ -30,6 +30,10 @@ msgctxt "#32005"
 msgid "Save position in video from TorrServe"
 msgstr "Salvează poziția de redare pentru videoclipurile din TorrServe"
 
+msgctxt "#32006"
+msgid "Show resume dialog"
+msgstr "Afișează fereastra de reluare"
+
 msgctxt "#32010"
 msgid "Actions"
 msgstr "Acțiuni"
@@ -81,3 +85,7 @@ msgstr "Filme"
 msgctxt "#32035"
 msgid "TV Shows"
 msgstr "Seriale TV"
+
+msgctxt "#32036"
+msgid "Resume from {0}"
+msgstr "Continuă de la {0}"

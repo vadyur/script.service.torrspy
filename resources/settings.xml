@@ -19,6 +19,8 @@
     <!-- Save position in video from TorrServe - label="32005" -->
     <setting type="bool" default="true" id="save_position" enable="true"
         label="32005"/>
+    <setting type="bool" default="true" id="show_resume_dialog" subsetting="true"
+             enable="eq(-1,true)" label="32006"/>
     <setting type="select" id="tmdb_language" label="TMDB language" default="auto"
         values="auto|en|ru|ro|uk|be|de|fr|es|it" />
   </category>
