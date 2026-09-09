@@ -663,6 +663,9 @@ def seek_saved_pos():
         return
 
     import xbmc
+    import xbmcgui
+    from vdlib.util.lang import translate_torrspy as trans
+
     player = xbmc.Player()
     if not player.isPlayingVideo():
         log('seek_saved_pos: not playing')
@@ -674,7 +677,34 @@ def seek_saved_pos():
         log('seek_saved_pos: {}'.format(pos))
         if pos:
             try:
-                player.seekTime(pos)
+                hours = int(pos) // 3600
+                minutes = (int(pos) % 3600) // 60
+                seconds = int(pos) % 60
+
+                if hours:
+                    resume_time = '{:02d}:{:02d}:{:02d}'.format(hours, minutes, seconds)
+                else:
+                    resume_time = '{:02d}:{:02d}'.format(minutes, seconds)
+
+                if addon_setting('show_resume_dialog') == 'true':
+                    was_playing = player.isPlaying()
+                    if was_playing:
+                        player.pause()
+
+                    result = xbmcgui.Dialog().yesno(
+                        addon_title(),
+                        trans(32036).format(resume_time),
+                    )
+
+                    if result:
+                        player.seekTime(pos)
+
+                    if was_playing and player.isPlayingVideo():
+                        if xbmc.getCondVisibility('Player.Paused'):
+                            player.pause()
+                else:
+                    player.seekTime(pos)
+
             except RuntimeError:
                 log('Error seeking to saved position: {}'.format(pos))
     except Exception as e:

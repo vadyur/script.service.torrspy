@@ -30,6 +30,10 @@ msgctxt "#32005"
 msgid "Save position in video from TorrServe"
 msgstr "Сохранять позицию в видео запущенном из TorrServe"
 
+msgctxt "#32006"
+msgid "Show resume dialog"
+msgstr "Показывать окно продолжения"
+
 msgctxt "#32010"
 msgid "Actions"
 msgstr "Действия"
@@ -81,3 +85,7 @@ msgstr "Фильмы"
 msgctxt "#32035"
 msgid "TV Shows"
 msgstr "Сериалы"
+
+msgctxt "#32036"
+msgid "Resume from {0}"
+msgstr "Продолжить с {0}"
