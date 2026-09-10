@@ -694,6 +694,7 @@ def seek_saved_pos():
                     result = xbmcgui.Dialog().yesno(
                         addon_title(),
                         trans(32036).format(resume_time),
+                        defaultbutton=xbmcgui.DLG_YESNO_YES_BTN,
                     )
 
                     if result:
