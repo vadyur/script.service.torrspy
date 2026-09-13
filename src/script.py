@@ -711,6 +711,45 @@ def seek_saved_pos():
     except Exception as e:
         log('Error in seek_saved_pos: {}'.format(str(e)))
 
+def show_overlay_on_pause(hash, index):
+    import xbmc
+    from torrserve_stream.overlay import Overlay
+    
+    class SpyPlayer(xbmc.Player):
+        def __init__(self) -> None:
+            super().__init__()
+            self.paused = True
+        
+        def onPlayBackEnded(self) -> None:
+            self.paused = False
+    
+        def onPlayBackStopped(self) -> None:
+            self.paused = False
+    
+        def onPlayBackError(self) -> None:
+            self.paused = False
+    
+        def onPlayBackPaused(self) -> None:
+            self.paused = True
+    
+        def onPlayBackResumed(self) -> None:
+            self.paused = False
+
+    player = SpyPlayer()        
+
+    idx = int(index) if index else None
+    overlay = Overlay(hash=hash, index=idx)
+    monitor = xbmc.Monitor()
+
+    overlay.show()
+    while not monitor.abortRequested():
+        if not player.paused:
+            break
+        overlay.update()
+        if monitor.waitForAbort(0.8):
+            break
+    overlay.hide()
+
 def main():
     #Runner(sys.argv[0])
     log('---TorrSpy---')
@@ -740,5 +779,7 @@ def main():
         seek_saved_pos()
     elif arg_exists('test_settings', 1):
         test_settings()
+    elif arg_exists('show_overlay_on_pause', 1):
+        show_overlay_on_pause(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
     else:
         open_settings()

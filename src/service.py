@@ -56,7 +56,10 @@ class MyPlayer(xbmc.Player):
 
     def __init__(self):
         from vdlib.torrspy.player_video_info import PlayerVideoInfo
+
         self.video_info = PlayerVideoInfo(self)
+        self.hash = None
+        self.index = None
         xbmc.Player.__init__(self)
 
     def getVideoInfo(self):
@@ -129,11 +132,12 @@ class MyPlayer(xbmc.Player):
 
         return result
 
-    def onAVStarted(self):
-        log('MyPlayer.onAVStarted')
+    def onPlayBackStarted(self):
+        log('MyPlayer.onPlayBackStarted')
 
-        #    def onPlayBackStarted(self):
-        #        log('MyPlayer.onPlayBackStarted')
+    def onAVStarted(self):
+        from torrserve_stream.engine import Engine
+        log('MyPlayer.onAVStarted')
 
         tag = self.getVideoInfoTag()
         file  = self.getPlayingFile()
@@ -141,6 +145,13 @@ class MyPlayer(xbmc.Player):
         log('\tMyPlayer.file = {}'.format(file))
         log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
         log('\tMyPlayer.DbId = {}'.format(tag.getDbId()))
+
+        if file:
+            self.hash = Engine.extract_hash_from_play_url(file)
+            self.index = Engine.extract_index_from_play_url(file)
+            if self.index is not None:
+                self.index -= 1
+            log('\thash={} index={}'.format(self.hash, self.index))
 
         if tag.getOriginalTitle() or tag.getDbId() > 0:
             log('Keep current info')
@@ -158,13 +169,28 @@ class MyPlayer(xbmc.Player):
 
                 self.updateInfoTag(item)
 
+    def onPlayBackPaused(self):
+        log('MyPlayer.onPlayBackPaused hash={} index={}'.format(self.hash, self.index))
+        if self.hash:
+            RunScript('show_overlay_on_pause', self.hash,
+                      str(self.index) if self.index is not None else '')
+
+    def onPlayBackResumed(self):
+        log('MyPlayer.onPlayBackResumed')
+
     def onPlayBackStopped(self):
-        log('onPlayBackStopped')
+        log('MyPlayer.onPlayBackStopped')
         self.end_playback()
 
     def onPlayBackEnded(self):
-        log('onPlayBackEnded')
+        log('MyPlayer.onPlayBackEnded')
         self.end_playback()
+
+    def onPlayBackSeek(self, time, seekOffset):
+        log('MyPlayer.onPlayBackSeek time={} seekOffset={}'.format(time, seekOffset))
+
+    def onPlayBackSpeedChanged(self, speed):
+        log('MyPlayer.onPlayBackSpeedChanged speed={}'.format(speed))
 
     def end_playback(self):
         RunScript('end_playback', self.video_info.dumps())
@@ -182,6 +208,12 @@ def main():
     if is_player_already_playing:
         log('Player is already playing TorrServer stream')
         player.onAVStarted()
+        
+        play_status = xbmc.getInfoLabel('Player.PlayStatus')
+        log('Startup play_status={} hash={} index={}'.format(play_status, player.hash, player.index))
+        if play_status == 'paused':
+            log('Player already paused at startup, calling onPlayBackPaused')
+            player.onPlayBackPaused()
 
     schedule_add_all_from_torserver_last_run = time()
 
@@ -199,11 +231,9 @@ def main():
             schedule_add_all_from_torserver_last_run = now
 
         if not player.isPlaying():
-            log('not playing')
             continue
 
         if not playing_torrserver_source():
-            log('not playing torrserver source')
             continue
 
         try:
