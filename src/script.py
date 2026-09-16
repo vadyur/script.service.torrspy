@@ -224,6 +224,11 @@ def get_info() -> Optional[Tuple[VideoInfo, Art]]:
         if video_info:
             make_valid_video_info(video_info)
             item.setInfo('video', video_info) # type: ignore
+
+            title = video_info.get('title')
+            if title:
+                item.setLabel(title)
+
         if art: item.setArt(art) # type: ignore
 
         player.updateInfoTag(item)
