@@ -717,7 +717,7 @@ def seek_saved_pos():
         log('Error in seek_saved_pos: {}'.format(str(e)))
 
 def show_overlay_on_pause(hash, index):
-    import xbmc
+    import xbmc, xbmcgui
     from torrserve_stream.overlay import Overlay
     
     class SpyPlayer(xbmc.Player):
@@ -739,6 +739,10 @@ def show_overlay_on_pause(hash, index):
     
         def onPlayBackResumed(self) -> None:
             self.paused = False
+
+    window = xbmcgui.Window(12005)
+    if window.getProperty('torrserve_overlay_active') == '1':
+        return
 
     player = SpyPlayer()        
 
