@@ -331,7 +331,7 @@ def load_pos_from_tsc_next(play_url):
         engine._wait_for_data()
 
         filename = Engine.extract_filename_from_play_url(play_url)
-        index = engine.get_ts_index(filename)
+        index = engine.get_ts_index(filename)    # 0-based
         if index is None:
             log('Could not find index for file: {}'.format(filename))
             return 0
@@ -381,7 +381,7 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
         engine._wait_for_data()
 
         filename = Engine.extract_filename_from_play_url(play_url)
-        index = engine.get_ts_index(filename)
+        index = engine.get_ts_index(filename)    # 0-based
         if index is None:
             log('Could not find index for file: {}'.format(filename))
             return
@@ -607,7 +607,7 @@ def try_append_torrent_to_media_library(list_item, engine, processed_items):
                     if year and year != str(video_info.get('year')):
                         return processed_items.set_processed(list_item, 1 * DAYS)
 
-                    sort_index = play_file['file_id']
+                    sort_index = play_file['file_id']    # 0-based
                     play_url = engine.play_url(sort_index, ts)
                     originaltitle = video_info.get('originaltitle')
                     year = video_info.get('year')
