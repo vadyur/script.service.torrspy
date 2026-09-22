@@ -148,9 +148,7 @@ class MyPlayer(xbmc.Player):
 
         if file:
             self.hash = Engine.extract_hash_from_play_url(file)
-            self.index = Engine.extract_index_from_play_url(file)
-            if self.index is not None:
-                self.index -= 1  # play url index is 1-based
+            self.index = Engine.extract_file_index_from_play_url(file)
             log('\thash={} index={}'.format(self.hash, self.index))
 
         if tag.getOriginalTitle() or tag.getDbId() > 0:
