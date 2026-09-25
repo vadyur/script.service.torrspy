@@ -4,6 +4,7 @@ import xbmc, xbmcgui, xbmcaddon
 
 from sys import version_info
 from time import time
+from typing import Dict
 
 if version_info >= (3, 0, 0):
     from urllib.parse import quote_plus
@@ -50,6 +51,10 @@ class MyMonitor(xbmc.Monitor):
     def onSettingsChanged(self):
         pass
 
+# url воспроизведения -> True, если видео запущено извне (torrspy пометил его своим tagline, см. main)
+externally_started = {}  # type: Dict[str, bool]
+
+
 class MyPlayer(xbmc.Player):
 
     tagline = '##TorrSpy##'
@@ -60,9 +65,6 @@ class MyPlayer(xbmc.Player):
         self.video_info = PlayerVideoInfo(self)
         self.hash = None
         self.index = None
-        # True - видео запущено извне (не плагином): torrspy пометил его своим tagline.
-        # Плагины (например script.media.aggregator) показывают свой оверлей сами.
-        self.started_externally = False
         xbmc.Player.__init__(self)
 
     def getVideoInfo(self):
@@ -149,8 +151,6 @@ class MyPlayer(xbmc.Player):
         log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
         log('\tMyPlayer.DbId = {}'.format(tag.getDbId()))
 
-        self.started_externally = False
-
         if file:
             self.hash = Engine.extract_hash_from_play_url(file)
             self.index = Engine.extract_file_index_from_play_url(file)
@@ -171,17 +171,16 @@ class MyPlayer(xbmc.Player):
                 item.setInfo('video', video_info)   # type: ignore
 
                 self.updateInfoTag(item)
-                self.started_externally = True
-        else:
-            self.started_externally = True
-
-        log('\tstarted_externally={}'.format(self.started_externally))
 
     def onPlayBackPaused(self):
-        log('MyPlayer.onPlayBackPaused hash={} index={} started_externally={}'.format(
-            self.hash, self.index, self.started_externally))
-        # оверлей только для видео, запущенного извне: у плагинов он свой
-        if self.hash and self.started_externally:
+        try:
+            url = self.getPlayingFile()
+        except RuntimeError:
+            url = None
+        external = bool(url) and externally_started.get(url, False)
+        log('MyPlayer.onPlayBackPaused hash={} index={} external={}'.format(self.hash, self.index, external))
+        # оверлей только для видео, запущенного извне: плагины (например script.media.aggregator) показывают свой
+        if self.hash and external:
             RunScript('show_overlay_on_pause', self.hash,
                       str(self.index) if self.index is not None else '')
 
@@ -205,7 +204,7 @@ class MyPlayer(xbmc.Player):
     def end_playback(self):
         RunScript('end_playback', self.video_info.dumps())
         self.video_info.reset()
-        self.started_externally = False
+        externally_started.clear()
 
 def main():
 
@@ -282,6 +281,7 @@ def main():
             last_position_save = now
 
         if vit.getTagLine() == player.tagline:
+            externally_started[current_play_url] = True
             log('reset tagline')
 
             item = xbmcgui.ListItem()
