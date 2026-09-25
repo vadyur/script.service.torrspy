@@ -13,17 +13,40 @@ MINUTES = 60
 HOURS = 3600
 DAYS = HOURS * 24
 
-import requests
-
 from vdlib.util import filesystem, urlparse, parse_qs
 from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path, settings_get_save_position
 from vdlib.torrspy.player_video_info import PlayerVideoInfo
 
-from vdlib.torrspy.detect import detect_tvshow, is_video, extract_filename, extract_title_date, extract_original_title_year, update_video_info_from_tmdb
-from vdlib.torrspy.strm_utils import save_movie, save_tvshow, save_movie_strm, save_tvshow_strms
+# Тяжёлые модули (requests, bs4/TMDB в detect, strm_utils, torrserve_stream.engine) импортируются
+# внутри функций: script.py запускается через RunScript на каждое действие, и на слабых приставках
+# импорт всего сразу занимал несколько секунд.
+_LAZY_NAMES = {
+    'detect_tvshow': 'vdlib.torrspy.detect', 'is_video': 'vdlib.torrspy.detect',
+    'extract_filename': 'vdlib.torrspy.detect', 'extract_title_date': 'vdlib.torrspy.detect',
+    'extract_original_title_year': 'vdlib.torrspy.detect', 'update_video_info_from_tmdb': 'vdlib.torrspy.detect',
+    'save_movie': 'vdlib.torrspy.strm_utils', 'save_tvshow': 'vdlib.torrspy.strm_utils',
+    'save_movie_strm': 'vdlib.torrspy.strm_utils', 'save_tvshow_strms': 'vdlib.torrspy.strm_utils',
+    'Engine': 'torrserve_stream.engine',
+}
 
-from torrserve_stream.engine import Engine
-from vdlib.torrspy.strm_utils import ts_settings
+
+def __getattr__(name):
+    # `from src.script import save_tvshow` и т.п. снаружи продолжают работать (PEP 562)
+    module = _LAZY_NAMES.get(name)
+    if module is None:
+        raise AttributeError(name)
+    import importlib
+    return getattr(importlib.import_module(module), name)
+
+
+_ts_settings_cache = None
+
+def _ts_settings():
+    global _ts_settings_cache
+    if _ts_settings_cache is None:
+        from torrserve_stream.settings import Settings
+        _ts_settings_cache = Settings()
+    return _ts_settings_cache
 
 def log(s):
     from vdlib.torrspy import _unit_log
@@ -45,7 +68,7 @@ def playing_torrserver_source():
     if player.isPlayingVideo():
         name = player.getPlayingFile()
         if name:
-            if ':{}/'.format(ts_settings.port) in name or is_torrserve_v2_link(name) or is_torrserve_v1_link(name):
+            if ':{}/'.format(_ts_settings().port) in name or is_torrserve_v2_link(name) or is_torrserve_v1_link(name):
                 return True
 
     return False
@@ -182,6 +205,8 @@ def make_valid_video_info(video_info: VideoInfo):
 
 
 def get_info() -> Optional[Tuple[VideoInfo, Art]]:
+    from torrserve_stream.engine import Engine
+    from vdlib.torrspy.detect import detect_tvshow, extract_filename, update_video_info_from_tmdb
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
 
@@ -201,7 +226,7 @@ def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     item.setPath(url)
 
     hash = Engine.extract_hash_from_play_url(url)
-    engine = Engine(hash=hash, host=ts_settings.host, port=ts_settings.port, auth=ts_settings.auth)
+    engine = Engine(hash=hash, host=_ts_settings().host, port=_ts_settings().port, auth=_ts_settings().auth)
     engine._wait_for_data()
 
     video_info: VideoInfo = get_video_info_from_engine(engine)
@@ -252,6 +277,7 @@ def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     return video_info, art
 
 def detect_video_info_from_filename(filename) -> VideoInfo:
+    from vdlib.torrspy.detect import extract_title_date
     log('Extract info')
     title, year = extract_title_date(filename)
     video_info: VideoInfo = {}
@@ -269,6 +295,7 @@ def get_video_info_from_engine(engine, data=None) -> VideoInfo:
     return video_info
 
 def detect_video_info_from_title(title) -> VideoInfo:
+    from vdlib.torrspy.detect import extract_original_title_year
     r = extract_original_title_year(title)
     return r
 
@@ -321,13 +348,14 @@ def create_sources():
             executebuiltin('Quit')
 
 def load_pos_from_tsc_next(play_url):
+    from torrserve_stream.engine import Engine
     log('load_pos_from_tsc_next: play_url = {}'.format(play_url))
     if not play_url:
         return 0
 
     try:
         hash = Engine.extract_hash_from_play_url(play_url)
-        engine = Engine(hash=hash, **ts_settings.engine_args)
+        engine = Engine(hash=hash, **_ts_settings().engine_args)
         engine._wait_for_data()
 
         filename = Engine.extract_filename_from_play_url(play_url)
@@ -364,6 +392,7 @@ def load_pos_from_tsc_next(play_url):
 
 def save_pos_to_tsc_next(position, totaltime, play_url):
 
+    from torrserve_stream.engine import Engine
     if not settings_get_save_position():
         return
 
@@ -377,7 +406,7 @@ def save_pos_to_tsc_next(position, totaltime, play_url):
 
     try:
         hash = Engine.extract_hash_from_play_url(play_url)
-        engine = Engine(hash=hash, **ts_settings.engine_args)
+        engine = Engine(hash=hash, **_ts_settings().engine_args)
         engine._wait_for_data()
 
         filename = Engine.extract_filename_from_play_url(play_url)
@@ -430,6 +459,7 @@ def save_playback_position(player_video_info_str):
         )
 
 def end_playback(player_video_info_str):
+    from vdlib.torrspy.strm_utils import save_movie, save_tvshow
     log("=== end_playback ===")
 
     pvi = PlayerVideoInfo(None)
@@ -545,6 +575,9 @@ class ProcessedItems(object):
 
 def try_append_torrent_to_media_library(list_item, engine, processed_items):
     # type: (dict, Engine, ProcessedItems) -> bool
+    import requests
+    from vdlib.torrspy.detect import extract_original_title_year, extract_title_date, is_video, update_video_info_from_tmdb
+    from vdlib.torrspy.strm_utils import save_movie_strm, save_tvshow_strms
     if processed_items.is_processed(list_item):
         return False
 
@@ -651,8 +684,9 @@ def schedule_add_all_from_torserver():
         log('schedule_add_all_from_torserver: processed')
 
 def add_all_from_processed_items(processed_items):
+    from torrserve_stream.engine import Engine
     processed_items.load()
-    engine = Engine(**ts_settings.engine_args)
+    engine = Engine(**_ts_settings().engine_args)
     need_update = False
     for list_item in engine.list():
         need_update |= try_append_torrent_to_media_library(list_item, engine, processed_items) # type: ignore

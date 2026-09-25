@@ -51,8 +51,24 @@ class MyMonitor(xbmc.Monitor):
     def onSettingsChanged(self):
         pass
 
-# url воспроизведения -> True, если видео запущено извне (torrspy пометил его своим tagline, см. main)
+# url воспроизведения -> True, если видео запущено извне (torrspy пометил его своим tagline)
 externally_started = {}  # type: Dict[str, bool]
+
+
+def start_external_video_info(player, url):
+    # type: (xbmc.Player, str) -> None
+    """Видео запущено извне: запомнить это, снять маркер TorrSpy и запустить получение информации."""
+    externally_started[url] = True
+    log('reset tagline')
+
+    item = xbmcgui.ListItem()
+    item.setPath(url)
+    item.setInfo('video', {'tagline': ''})   # type: ignore
+    player.updateInfoTag(item)
+
+    log('RunScript get_info')
+    RunScript('get_info')
+    RunScript('seek_saved_pos')
 
 
 class MyPlayer(xbmc.Player):
@@ -160,17 +176,10 @@ class MyPlayer(xbmc.Player):
             log('Keep current info')
             return
 
-        if tag.getTagLine() != self.tagline:
-
-            if playing_torrserver_source():
-
-                item = xbmcgui.ListItem()
-                item.setPath(file)
-
-                video_info = {'tagline' : self.tagline}
-                item.setInfo('video', video_info)   # type: ignore
-
-                self.updateInfoTag(item)
+        # Видео без информации, запущенное извне: получаем информацию сразу, не дожидаясь цикла сервиса
+        # (раньше ставился маркер TorrSpy в tagline, и цикл подхватывал его только через 2-4 секунды)
+        if tag.getTagLine() == self.tagline or playing_torrserver_source():
+            start_external_video_info(self, file)
 
     def onPlayBackPaused(self):
         try:
@@ -259,7 +268,6 @@ def main():
             log('Video changed: {} -> {}'.format(last_play_url, current_play_url))
             last_play_url = current_play_url
             last_position_save = time()
-            continue
 
         now = time()
 
@@ -281,16 +289,4 @@ def main():
             last_position_save = now
 
         if vit.getTagLine() == player.tagline:
-            externally_started[current_play_url] = True
-            log('reset tagline')
-
-            item = xbmcgui.ListItem()
-            url = player.getPlayingFile()
-            item.setPath(url)
-            item.setInfo('video',
-                        {'tagline': '',})
-            player.updateInfoTag(item)
-
-            log('RunScript get_info')
-            RunScript('get_info')
-            RunScript('seek_saved_pos')
+            start_external_video_info(player, current_play_url)
