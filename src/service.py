@@ -60,6 +60,9 @@ class MyPlayer(xbmc.Player):
         self.video_info = PlayerVideoInfo(self)
         self.hash = None
         self.index = None
+        # True - видео запущено извне (не плагином): torrspy пометил его своим tagline.
+        # Плагины (например script.media.aggregator) показывают свой оверлей сами.
+        self.started_externally = False
         xbmc.Player.__init__(self)
 
     def getVideoInfo(self):
@@ -146,6 +149,8 @@ class MyPlayer(xbmc.Player):
         log('\tMyPlayer.getTitle() = {}'.format(tag.getTitle()))
         log('\tMyPlayer.DbId = {}'.format(tag.getDbId()))
 
+        self.started_externally = False
+
         if file:
             self.hash = Engine.extract_hash_from_play_url(file)
             self.index = Engine.extract_file_index_from_play_url(file)
@@ -166,10 +171,17 @@ class MyPlayer(xbmc.Player):
                 item.setInfo('video', video_info)   # type: ignore
 
                 self.updateInfoTag(item)
+                self.started_externally = True
+        else:
+            self.started_externally = True
+
+        log('\tstarted_externally={}'.format(self.started_externally))
 
     def onPlayBackPaused(self):
-        log('MyPlayer.onPlayBackPaused hash={} index={}'.format(self.hash, self.index))
-        if self.hash:
+        log('MyPlayer.onPlayBackPaused hash={} index={} started_externally={}'.format(
+            self.hash, self.index, self.started_externally))
+        # оверлей только для видео, запущенного извне: у плагинов он свой
+        if self.hash and self.started_externally:
             RunScript('show_overlay_on_pause', self.hash,
                       str(self.index) if self.index is not None else '')
 
@@ -193,6 +205,7 @@ class MyPlayer(xbmc.Player):
     def end_playback(self):
         RunScript('end_playback', self.video_info.dumps())
         self.video_info.reset()
+        self.started_externally = False
 
 def main():
 
