@@ -54,6 +54,8 @@ class MyMonitor(xbmc.Monitor):
 # url воспроизведения -> True, если видео запущено извне (torrspy пометил его своим tagline)
 externally_started = {}  # type: Dict[str, bool]
 
+def playlist_size():
+    return xbmc.PlayList(xbmc.PLAYLIST_VIDEO).size()
 
 def start_external_video_info(player, url):
     # type: (xbmc.Player, str) -> None
@@ -174,6 +176,10 @@ class MyPlayer(xbmc.Player):
 
         if tag.getOriginalTitle() or tag.getDbId() > 0:
             log('Keep current info')
+            if playlist_size() > 1 and playing_torrserver_source():
+                externally_started[file] = True
+                RunScript('enrich_playlist')
+                RunScript('seek_saved_pos')
             return
 
         # Видео без информации, запущенное извне: получаем информацию сразу, не дожидаясь цикла сервиса

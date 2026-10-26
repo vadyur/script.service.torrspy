@@ -210,6 +210,9 @@ def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     log('---TorrSpy: get_info---')
     import xbmc, xbmcgui
 
+    if xbmc.PlayList(xbmc.PLAYLIST_VIDEO).size() > 1:
+        return enrich_playlist()
+
     player = xbmc.Player()
 
     for _ in range(20):
@@ -275,6 +278,54 @@ def get_info() -> Optional[Tuple[VideoInfo, Art]]:
     save_art(hash, art)
 
     return video_info, art
+
+def enrich_playlist():
+    # m3u playlist: add metadata to the current and the next item only (called on every item start)
+    import xbmc, xbmcgui
+    from torrserve_stream.engine import Engine
+    from vdlib.torrspy.detect import detect_tvshow, extract_filename, update_video_info_from_tmdb
+    log('---TorrSpy: enrich_playlist---')
+
+    player = xbmc.Player()
+    pl = xbmc.PlayList(xbmc.PLAYLIST_VIDEO)
+    current = pl.getposition()
+
+    for pos in range(max(0, current - 1), min(pl.size(), current + 2)):
+        old = pl[pos]
+        url = old.getPath()
+        if old.getVideoInfoTag().getOriginalTitle():
+            continue
+        if not (':{}/'.format(_ts_settings().port) in url or is_torrserve_v2_link(url) or is_torrserve_v1_link(url)):
+            continue
+
+        engine = Engine(hash=Engine.extract_hash_from_play_url(url), **_ts_settings().engine_args)
+        engine._wait_for_data()
+
+        video_info = (get_video_info_from_engine(engine)
+                      or detect_video_info_from_title(engine.title)
+                      or detect_video_info_from_filename(extract_filename(url)))
+        art = engine.get_art() or {}    # type: ignore
+
+        if 'imdbnumber' not in video_info or 'director' not in video_info:
+            isTVShow = detect_tvshow(engine.title) if engine.title else None
+            update_video_info_from_tmdb(video_info, art, url=url, isTVshow=isTVShow)
+        make_valid_video_info(video_info)
+        log('Enrich: pos={}, title={!r}'.format(pos, video_info.get('title')))
+
+        # user may have skipped meanwhile
+        if pl.getposition() != current or pl[pos].getPath() != url:
+            return
+
+        item = xbmcgui.ListItem(video_info.get('title') or old.getLabel(), path=url)
+        item.setInfo('video', video_info)   # type: ignore
+        if art: item.setArt(art)            # type: ignore
+
+        if pos == current:
+            player.updateInfoTag(item)
+
+        # replace the playlist item, so the info stays after switching to the next one
+        pl.remove(url)
+        pl.add(url, item, pos)
 
 def detect_video_info_from_filename(filename) -> VideoInfo:
     from vdlib.torrspy.detect import extract_title_date
@@ -818,6 +869,8 @@ def main():
         create_sources()
     elif arg_exists('schedule_add_all_from_torserver', 1):
         schedule_add_all_from_torserver()
+    elif arg_exists('enrich_playlist', 1):
+        enrich_playlist()
     elif arg_exists('seek_saved_pos', 1):
         seek_saved_pos()
     elif arg_exists('test_settings', 1):
