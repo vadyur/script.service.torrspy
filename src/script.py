@@ -780,18 +780,34 @@ def show_overlay_on_pause(hash, index):
 
     player = SpyPlayer()        
 
+    # Do not show the overlay if playback has already resumed.
+    if not player.isPlayingVideo():
+        return
+
+    if not xbmc.getCondVisibility('Player.Paused'):
+        return
+
     idx = int(index) if index else None
     overlay = Overlay(hash=hash, index=idx)
     monitor = xbmc.Monitor()
 
-    overlay.show()
-    while not monitor.abortRequested():
-        if not player.paused:
-            break
-        overlay.update()
-        if monitor.waitForAbort(0.8):
-            break
-    overlay.hide()
+    try:
+        # Recheck playback state immediately before showing the overlay.
+        if not player.isPlayingVideo():
+            return
+
+        if not xbmc.getCondVisibility('Player.Paused'):
+            return
+
+        overlay.show()
+        while not monitor.abortRequested():
+            if not player.paused:
+                break
+            overlay.update()
+            if monitor.waitForAbort(0.8):
+                break
+    finally:
+        overlay.hide()
 
 def main():
     #Runner(sys.argv[0])
