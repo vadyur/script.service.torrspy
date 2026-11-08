@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-import sys, json, re
+import sys, json
 #from vdlib.scrappers.movieapi import imdb_cast
 from sys import version_info
 from time import sleep, time
@@ -16,6 +16,7 @@ DAYS = HOURS * 24
 from vdlib.util import filesystem, urlparse, parse_qs
 from vdlib.torrspy.info import addon_set_setting, addon_setting, addon_title, make_path_to_base_relative, load_video_info, save_video_info, save_art, addon_base_path, settings_get_save_position
 from vdlib.torrspy.player_video_info import PlayerVideoInfo
+from .links import _ts_settings, is_torrserver_url, is_torrserve_v1_link, is_torrserve_v2_link, playing_torrserver_source
 
 # Тяжёлые модули (requests, bs4/TMDB в detect, strm_utils, torrserve_stream.engine) импортируются
 # внутри функций: script.py запускается через RunScript на каждое действие, и на слабых приставках
@@ -39,39 +40,9 @@ def __getattr__(name):
     return getattr(importlib.import_module(module), name)
 
 
-_ts_settings_cache = None
-
-def _ts_settings():
-    global _ts_settings_cache
-    if _ts_settings_cache is None:
-        from torrserve_stream.settings import Settings
-        _ts_settings_cache = Settings()
-    return _ts_settings_cache
-
 def log(s):
     from vdlib.torrspy import _unit_log
     _unit_log('script.py', s)
-
-def is_torrserve_v2_link(url):
-    pattern = r'http://.+/stream/.+\?link=[a-f\d]{40}&index=\d+&play'
-    return re.match(pattern, url) is not None
-
-def is_torrserve_v1_link(url):
-    pattern = r'http://.+/torrent/view/[a-f\d]{40}/'
-    return re.match(pattern, url) is not None
-
-def playing_torrserver_source():
-    # type: () -> bool
-    import xbmc
-    player = xbmc.Player()
-
-    if player.isPlayingVideo():
-        name = player.getPlayingFile()
-        if name:
-            if ':{}/'.format(_ts_settings().port) in name or is_torrserve_v2_link(name) or is_torrserve_v1_link(name):
-                return True
-
-    return False
 
 def alert(s):
     import xbmcgui
@@ -750,65 +721,6 @@ def seek_saved_pos():
     except Exception as e:
         log('Error in seek_saved_pos: {}'.format(str(e)))
 
-def show_overlay_on_pause(hash, index):
-    import xbmc, xbmcgui
-    from torrserve_stream.overlay import Overlay
-    
-    class SpyPlayer(xbmc.Player):
-        def __init__(self) -> None:
-            super().__init__()
-            self.paused = True
-        
-        def onPlayBackEnded(self) -> None:
-            self.paused = False
-    
-        def onPlayBackStopped(self) -> None:
-            self.paused = False
-    
-        def onPlayBackError(self) -> None:
-            self.paused = False
-    
-        def onPlayBackPaused(self) -> None:
-            self.paused = True
-    
-        def onPlayBackResumed(self) -> None:
-            self.paused = False
-
-    window = xbmcgui.Window(12005)
-    if window.getProperty('torrserve_overlay_active') == '1':
-        return
-
-    player = SpyPlayer()        
-
-    # Do not show the overlay if playback has already resumed.
-    if not player.isPlayingVideo():
-        return
-
-    if not xbmc.getCondVisibility('Player.Paused'):
-        return
-
-    idx = int(index) if index else None
-    overlay = Overlay(hash=hash, index=idx)
-    monitor = xbmc.Monitor()
-
-    try:
-        # Recheck playback state immediately before showing the overlay.
-        if not player.isPlayingVideo():
-            return
-
-        if not xbmc.getCondVisibility('Player.Paused'):
-            return
-
-        overlay.show()
-        while not monitor.abortRequested():
-            if not player.paused:
-                break
-            overlay.update()
-            if monitor.waitForAbort(0.8):
-                break
-    finally:
-        overlay.hide()
-
 def main():
     #Runner(sys.argv[0])
     log('---TorrSpy---')
@@ -839,6 +751,7 @@ def main():
     elif arg_exists('test_settings', 1):
         test_settings()
     elif arg_exists('show_overlay_on_pause', 1):
+        from .overlay import show_overlay_on_pause
         show_overlay_on_pause(sys.argv[2], sys.argv[3] if len(sys.argv) > 3 else '')
     else:
         open_settings()
