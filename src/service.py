@@ -58,6 +58,8 @@ class MyMonitor(xbmc.Monitor):
 # занимается PauseRestorer (src/pause_restore.py).
 SERVICE_TICK = 2
 
+def playlist_size():
+    return xbmc.PlayList(xbmc.PLAYLIST_VIDEO).size()
 
 def start_external_video_info(player: 'MyPlayer', url: Optional[str]) -> None:
     """Видео запущено извне: запомнить это, снять маркер TorrSpy и запустить получение информации."""
@@ -198,6 +200,10 @@ class MyPlayer(xbmc.Player):
 
         if tag.getOriginalTitle() or tag.getDbId() > 0:
             log('Keep current info')
+            if playlist_size() > 1 and playing_torrserver_source():
+                externally_started[file] = True
+                RunScript('enrich_playlist')
+                RunScript('seek_saved_pos')
             return
 
         # Видео без информации, запущенное извне: получаем информацию сразу, не дожидаясь цикла сервиса
